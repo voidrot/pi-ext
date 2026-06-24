@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/voidrot/pi-ext/main/schema/pi-ext.schema.json",
+  "title": "Voidrot Pi Extension Config",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable or disable all @voidrot/pi-ext modules and owned tools."
+    },
+    "debug": {
+      "type": "boolean",
+      "description": "Enable debug logging from @voidrot/pi-ext."
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dcp": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable Dynamic Context Pruning."
+            },
+            "tools": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "compress": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the DCP compress tool."
+                    }
+                  }
+                }
+              }
+            },
+            "config": {
+              "type": "object",
+              "description": "DCP module-specific config. See README for supported keys.",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

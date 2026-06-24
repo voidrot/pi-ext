@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/voidrot/pi-ext/main/schema/pi-ext.schema.json",
+  "enabled": true,
+  "debug": false,
+  "modules": {
+    "dcp": {
+      "enabled": true,
+      "tools": {
+        "compress": { "enabled": true }
+      },
+      "config": {
+        "manualMode": { "enabled": false, "automaticStrategies": true },
+        "compress": {
+          "permission": "allow",
+          "maxContextLimit": "80%",
+          "minContextLimit": "40%"
+        },
+        "strategies": {
+          "deduplication": { "enabled": true },
+          "purgeErrors": { "enabled": true, "turns": 4 }
+        }
+      }
+    }
+  }
+}
