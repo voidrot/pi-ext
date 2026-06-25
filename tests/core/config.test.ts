@@ -31,6 +31,22 @@ test("loads defaults when no config exists", () => {
   assert.equal(config.modules.agents.childExtensions.mode, "inherit-safe");
   assert.equal(config.modules.agents.transcripts.persist, true);
   assert.equal(config.modules.agents.stall.enabled, true);
+  assert.equal(config.modules.memory.enabled, true);
+  assert.equal(config.modules.memory.prompt.enabled, true);
+  assert.equal(config.modules.memory.prompt.maxMemoriesPerScope, 12);
+  assert.equal(config.modules.memory.prompt.maxContentChars, 500);
+  assert.equal(config.modules.memory.tools.createGlobalMemory.enabled, true);
+  assert.equal(config.modules.memory.tools.createProjectMemory.enabled, true);
+  assert.equal(config.modules.memory.tools.createSessionMemory.enabled, true);
+  assert.equal(config.modules.memory.tools.searchMemories.enabled, true);
+  assert.equal(config.modules.memory.vector.enabled, true);
+  assert.equal(config.modules.memory.vector.provider, "local");
+  assert.equal(config.modules.memory.vector.dimensions, 256);
+  assert.equal(config.modules.memory.vector.searchLimit, 8);
+  assert.equal(config.modules.memory.vector.background.enabled, true);
+  assert.equal(config.modules.memory.vector.background.batchSize, 10);
+  assert.equal(config.modules.memory.vector.ollama.endpoint, "http://127.0.0.1:11434");
+  assert.equal(config.modules.memory.vector.ollama.model, "nomic-embed-text");
 });
 
 test("merges global jsonc over defaults", async () => {
@@ -105,6 +121,41 @@ test("merges module config without losing defaults", () => {
   assert.equal(config.modules.dcp.enabled, true);
   assert.equal(config.modules.dcp.tools.compress.enabled, true);
   assert.deepEqual(config.modules.dcp.config, { compress: { permission: "deny" } });
+});
+
+test("merges partial memory config without losing defaults", () => {
+  const config = mergePiExtConfig(defaultPiExtConfig, {
+    modules: {
+      memory: {
+        prompt: { maxMemoriesPerScope: 5 },
+        tools: { createSessionMemory: { enabled: false }, searchMemories: { enabled: false } },
+        vector: {
+          enabled: false,
+          provider: "ollama",
+          searchLimit: 3,
+          background: { batchSize: 4 },
+          ollama: { endpoint: "http://localhost:11434", model: "all-minilm", timeoutMs: 5000 },
+        },
+      },
+    },
+  });
+
+  assert.equal(config.modules.memory.enabled, true);
+  assert.equal(config.modules.memory.prompt.enabled, true);
+  assert.equal(config.modules.memory.prompt.maxMemoriesPerScope, 5);
+  assert.equal(config.modules.memory.prompt.maxContentChars, 500);
+  assert.equal(config.modules.memory.tools.createGlobalMemory.enabled, true);
+  assert.equal(config.modules.memory.tools.createProjectMemory.enabled, true);
+  assert.equal(config.modules.memory.tools.createSessionMemory.enabled, false);
+  assert.equal(config.modules.memory.tools.searchMemories.enabled, false);
+  assert.equal(config.modules.memory.vector.enabled, false);
+  assert.equal(config.modules.memory.vector.provider, "ollama");
+  assert.equal(config.modules.memory.vector.searchLimit, 3);
+  assert.equal(config.modules.memory.vector.background.enabled, true);
+  assert.equal(config.modules.memory.vector.background.batchSize, 4);
+  assert.equal(config.modules.memory.vector.ollama.endpoint, "http://localhost:11434");
+  assert.equal(config.modules.memory.vector.ollama.model, "all-minilm");
+  assert.equal(config.modules.memory.vector.ollama.timeoutMs, 5000);
 });
 
 test("merges partial dashboard browser config without losing server defaults", () => {

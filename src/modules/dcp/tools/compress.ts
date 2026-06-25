@@ -60,6 +60,8 @@ export function registerCompressTool(
       "Compress stale closed conversation ranges into durable summaries.",
     promptGuidelines: [
       "Use compress when older Pi conversation content is closed and no longer needed verbatim.",
+      "Do not compress old raw tool-call transcripts; DCP strips them after the stale-tool threshold.",
+      "Older selections must use shorter summaries. If the tool rejects an over-budget summary, retry with only durable facts.",
     ],
     parameters: Type.Union([rangeSchema, messageSchema]),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -83,8 +85,8 @@ export function registerCompressTool(
       const input = params as any;
       const result =
         config.compress.mode === "message" || input.content?.[0]?.messageId
-          ? applyMessageCompression(state, frames, originEntryId, input)
-          : applyRangeCompression(state, frames, originEntryId, input);
+          ? applyMessageCompression(state, frames, originEntryId, input, config)
+          : applyRangeCompression(state, frames, originEntryId, input, config);
       appendStateEntry(pi, state);
       syncDcpWidget(ctx, state, config.ui);
       notifyCompression(ctx, state, result, config);

@@ -7,5 +7,6 @@ coverage/
 .env.*
 !.env.example
 .vscode/mise-tools/
-.pi/*.db*
+.pi/*.db-shm
+.pi/*.db-wal
 NOTES.md

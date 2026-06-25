@@ -71,6 +71,64 @@
               "description": "DCP module-specific config. See README for supported keys.",
               "additionalProperties": true,
               "properties": {
+                "compress": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "DCP compression behavior and token budgets.",
+                  "properties": {
+                    "summaryTiers": {
+                      "type": "array",
+                      "description": "Age-tier summary budgets. Older content should have lower maxSummaryRatio values.",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "minTurns": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Minimum DCP turn age for this summary budget tier."
+                          },
+                          "maxSummaryRatio": {
+                            "type": "number",
+                            "minimum": 0.01,
+                            "maximum": 1,
+                            "description": "Maximum summary tokens as a ratio of compressed raw tokens."
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "strategies": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "DCP automatic context-retention strategies.",
+                  "properties": {
+                    "staleToolCalls": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Strip old tool-call/tool-result artifacts from outgoing model context.",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Enable stale tool-call stripping."
+                        },
+                        "turns": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Number of DCP turns after which unprotected tool artifacts are stripped."
+                        },
+                        "protectedTools": {
+                          "type": "array",
+                          "description": "Tool names exempt from stale tool-call stripping.",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
                 "ui": {
                   "type": "object",
                   "additionalProperties": true,
@@ -269,6 +327,149 @@
                   "type": "integer",
                   "minimum": 1000,
                   "description": "Reserved for future auto-abort after stall."
+                }
+              }
+            }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable memory tools and prompt context."
+            },
+            "prompt": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Inject saved memories into new session system prompts."
+                },
+                "maxMemoriesPerScope": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "description": "Maximum memories to inject for each scope."
+                },
+                "maxContentChars": {
+                  "type": "integer",
+                  "minimum": 80,
+                  "maximum": 4000,
+                  "description": "Maximum characters per memory in prompt context."
+                }
+              }
+            },
+            "tools": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "createGlobalMemory": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the create_global_memory tool."
+                    }
+                  }
+                },
+                "createProjectMemory": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the create_project_memory tool."
+                    }
+                  }
+                },
+                "createSessionMemory": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the create_session_memory tool."
+                    }
+                  }
+                },
+                "searchMemories": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the search_memories tool."
+                    }
+                  }
+                }
+              }
+            },
+            "vector": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable sqlite-vec backed vector indexing and search for memories."
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": ["local", "ollama"],
+                  "description": "Embedding provider used for memory vector indexing and search."
+                },
+                "dimensions": {
+                  "type": "integer",
+                  "const": 256,
+                  "description": "Embedding dimensions. Existing sqlite-vec tables are fixed at 256 dimensions."
+                },
+                "searchLimit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50,
+                  "description": "Default number of vector memory search results."
+                },
+                "background": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Create/update memory vectors asynchronously after memory tools return."
+                    },
+                    "batchSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100,
+                      "description": "Maximum pending memories to index per background worker pass."
+                    }
+                  }
+                },
+                "ollama": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "endpoint": {
+                      "type": "string",
+                      "description": "Base Ollama endpoint, for example http://127.0.0.1:11434."
+                    },
+                    "model": {
+                      "type": "string",
+                      "description": "Ollama embedding model, for example nomic-embed-text."
+                    },
+                    "timeoutMs": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Ollama embedding request timeout in milliseconds."
+                    },
+                    "keepAlive": {
+                      "type": "string",
+                      "description": "Optional Ollama keep_alive value."
+                    }
+                  }
                 }
               }
             }

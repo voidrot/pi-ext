@@ -2,16 +2,18 @@ export const SYSTEM_PROMPT = `You operate in a context-constrained Pi coding ses
 
 The context-management tool is \`compress\`. It replaces older visible conversation content with dense technical summaries that you write.
 
-\`<dcp-message-id>\` and \`<dcp-system-reminder>\` tags are metadata injected by the Pi DCP extension. Use those IDs only as boundaries for the compress tool. Do not quote or output DCP metadata tags in normal assistant responses.
+DCP automatically strips old tool-call/tool-result transcripts after the configured stale-tool threshold (default 5 turns). Do not spend compression budget summarizing old raw tool outputs unless their conclusions are required for future work.
 
-Compress sections that are genuinely closed: finished research, completed implementation, exhausted exploration, or dead-end noise that no longer needs verbatim context. Do not compress raw context that is still needed for exact edits, precise errors, or immediate next steps.`;
+When compressing, use stricter summaries for older content:
+- fresh stale work: preserve exact technical details, but avoid transcripts;
+- warm work (5+ turns old): keep decisions, file paths, commands, failures, and next actions only;
+- cold work (15+ turns old): keep only durable facts that affect future edits.
+`;
 
-export const COMPRESS_RANGE_PROMPT = `Collapse one or more contiguous conversation ranges into detailed summaries. Use visible mNNNN or bN IDs as startId and endId boundaries. Summaries must preserve file paths, decisions, constraints, key findings, and next steps. If a range includes a compressed block, reference it with its exact (bN) placeholder once.`;
+export const TURN_NUDGE = ``;
 
-export const COMPRESS_MESSAGE_PROMPT = `Compress individual raw messages by messageId. Use this for surgical cleanup of large stale messages. Each summary must preserve the message's durable technical value while removing verbosity.`;
+export const ITERATION_NUDGE = ``;
 
-export const CONTEXT_LIMIT_NUDGE = `<dcp-system-reminder>Context is high. If there is stale closed work in visible history, call compress with precise message IDs before continuing.</dcp-system-reminder>`;
+export const CONTEXT_LIMIT_NUDGE = `
 
-export const TURN_NUDGE = `<dcp-system-reminder>Review whether older completed work can be compressed into high-fidelity summaries.</dcp-system-reminder>`;
-
-export const ITERATION_NUDGE = `<dcp-system-reminder>This task has many iterations. Compress closed loops and obsolete exploration when safe.</dcp-system-reminder>`;
+<dcp-system-reminder>Context is high. If there is stale closed work in visible history, call compress with precise message IDs before continuing.</dcp-system-reminder>`;

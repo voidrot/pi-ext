@@ -19,6 +19,13 @@ A single Pi.dev package that hosts Voidrot Pi extensions, workflow modules, and 
   - Registers `run_subagent`, `get_subagent_result`, and `steer_subagent` when enabled.
   - Persists child transcripts under the parent session task directory when possible.
   - Sends parent follow-up notifications when background children complete, fail, abort, or stall.
+- `memory` — global, project, and session-scoped memories.
+  - Registers `create_global_memory`, `create_project_memory`, `create_session_memory`, and `search_memories` when enabled.
+  - Stores global memories in the global SQLite database.
+  - Stores project/session memories in trusted project SQLite databases.
+  - Indexes memories with sqlite-vec in a background worker after memory tools return.
+  - Supports local lexical embeddings or external Ollama `/api/embed` endpoints for vector creation/search.
+  - Injects compact saved memories into new session prompts.
 
 ## Install locally for development
 
@@ -101,7 +108,19 @@ Minimal global config:
         "compress": {
           "permission": "allow",
           "maxContextLimit": "80%",
-          "minContextLimit": "40%"
+          "minContextLimit": "40%",
+          "summaryTiers": [
+            { "minTurns": 0, "maxSummaryRatio": 0.4 },
+            { "minTurns": 5, "maxSummaryRatio": 0.25 },
+            { "minTurns": 15, "maxSummaryRatio": 0.12 }
+          ]
+        },
+        "strategies": {
+          "staleToolCalls": {
+            "enabled": true,
+            "turns": 5,
+            "protectedTools": ["read", "edit", "write"]
+          }
         },
         "ui": {
           "compressedBlocksWidget": true,
@@ -133,6 +152,28 @@ Minimal global config:
       "childExtensions": { "mode": "inherit-safe" },
       "transcripts": { "persist": true },
       "stall": { "enabled": true, "timeoutMs": 120000, "notify": true }
+    },
+    "memory": {
+      "enabled": true,
+      "prompt": { "enabled": true, "maxMemoriesPerScope": 12, "maxContentChars": 500 },
+      "tools": {
+        "createGlobalMemory": { "enabled": true },
+        "createProjectMemory": { "enabled": true },
+        "createSessionMemory": { "enabled": true },
+        "searchMemories": { "enabled": true }
+      },
+      "vector": {
+        "enabled": true,
+        "provider": "local",
+        "dimensions": 256,
+        "searchLimit": 8,
+        "background": { "enabled": true, "batchSize": 10 },
+        "ollama": {
+          "endpoint": "http://127.0.0.1:11434",
+          "model": "nomic-embed-text",
+          "timeoutMs": 30000
+        }
+      }
     }
   }
 }

@@ -2,6 +2,11 @@ export type Permission = "ask" | "allow" | "deny";
 export type CompressMode = "range" | "message";
 export type LimitValue = number | `${number}%`;
 
+export interface CompressionSummaryTier {
+  minTurns: number;
+  maxSummaryRatio: number;
+}
+
 export interface DcpConfig {
   enabled: boolean;
   debug: boolean;
@@ -22,6 +27,7 @@ export interface DcpConfig {
     nudgeForce: "strong" | "soft";
     protectedTools: string[];
     protectUserMessages: boolean;
+    summaryTiers: CompressionSummaryTier[];
   };
   ui: {
     compressedBlocksWidget: boolean;
@@ -30,6 +36,7 @@ export interface DcpConfig {
   strategies: {
     deduplication: { enabled: boolean; protectedTools: string[] };
     purgeErrors: { enabled: boolean; turns: number; protectedTools: string[] };
+    staleToolCalls: { enabled: boolean; turns: number; protectedTools: string[] };
   };
 }
 
@@ -53,6 +60,11 @@ export const defaultConfig: DcpConfig = {
     nudgeForce: "soft",
     protectedTools: ["read", "write", "edit", "bash", "task", "skill"],
     protectUserMessages: false,
+    summaryTiers: [
+      { minTurns: 0, maxSummaryRatio: 0.4 },
+      { minTurns: 5, maxSummaryRatio: 0.25 },
+      { minTurns: 15, maxSummaryRatio: 0.12 },
+    ],
   },
   ui: {
     compressedBlocksWidget: true,
@@ -61,11 +73,12 @@ export const defaultConfig: DcpConfig = {
   strategies: {
     deduplication: { enabled: true, protectedTools: [] },
     purgeErrors: { enabled: true, turns: 4, protectedTools: [] },
+    staleToolCalls: { enabled: true, turns: 5, protectedTools: [] },
   },
 };
 
 export function mergeDcpConfig(overrides: Record<string, unknown>): DcpConfig {
-  return mergeConfig(cloneConfig(defaultConfig), overrides as Partial<DcpConfig>);
+  return mergeConfig(cloneConfig(defaultConfig), overrides as any);
 }
 
 export function resolveLimit(value: LimitValue, contextWindow: number | undefined): number {
@@ -75,7 +88,7 @@ export function resolveLimit(value: LimitValue, contextWindow: number | undefine
   return Math.floor((contextWindow * pct) / 100);
 }
 
-function mergeConfig(base: DcpConfig, override: Partial<DcpConfig>): DcpConfig {
+function mergeConfig(base: DcpConfig, override: any): DcpConfig {
   return {
     enabled: override.enabled ?? base.enabled,
     debug: override.debug ?? base.debug,
@@ -97,6 +110,7 @@ function mergeConfig(base: DcpConfig, override: Partial<DcpConfig>): DcpConfig {
         override.compress?.iterationNudgeThreshold ?? base.compress.iterationNudgeThreshold,
       ),
       protectedTools: unique([...(base.compress.protectedTools ?? []), ...(override.compress?.protectedTools ?? [])]),
+      summaryTiers: normalizeSummaryTiers(override.compress?.summaryTiers, base.compress.summaryTiers),
     },
     ui: {
       compressedBlocksWidget: override.ui?.compressedBlocksWidget ?? base.ui.compressedBlocksWidget,
@@ -118,8 +132,31 @@ function mergeConfig(base: DcpConfig, override: Partial<DcpConfig>): DcpConfig {
           ...(override.strategies?.purgeErrors?.protectedTools ?? []),
         ]),
       },
+      staleToolCalls: {
+        enabled: override.strategies?.staleToolCalls?.enabled ?? base.strategies.staleToolCalls.enabled,
+        turns: Math.max(1, override.strategies?.staleToolCalls?.turns ?? base.strategies.staleToolCalls.turns),
+        protectedTools: unique([
+          ...(override.strategies?.staleToolCalls?.protectedTools ?? base.strategies.staleToolCalls.protectedTools),
+        ]),
+      },
     },
   };
+}
+
+function normalizeSummaryTiers(input: unknown, fallback: CompressionSummaryTier[]): CompressionSummaryTier[] {
+  if (!Array.isArray(input)) return fallback;
+  const tiers = input
+    .map((item) => {
+      const raw = item as Partial<CompressionSummaryTier>;
+      if (typeof raw.minTurns !== "number" || typeof raw.maxSummaryRatio !== "number") return undefined;
+      return {
+        minTurns: Math.max(0, Math.floor(raw.minTurns)),
+        maxSummaryRatio: Math.min(1, Math.max(0.01, raw.maxSummaryRatio)),
+      };
+    })
+    .filter((item): item is CompressionSummaryTier => !!item)
+    .sort((a, b) => a.minTurns - b.minTurns);
+  return tiers.length > 0 && tiers[0]!.minTurns === 0 ? tiers : fallback;
 }
 
 function cloneConfig(config: DcpConfig): DcpConfig {

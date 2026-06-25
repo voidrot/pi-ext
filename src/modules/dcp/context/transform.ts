@@ -4,10 +4,12 @@ import { CONTEXT_LIMIT_NUDGE } from "../prompts";
 import type { ContextFrame, DcpState } from "../state/types";
 import {
   appendTextToMessage,
-  cloneMessage,
   createSyntheticSummaryMessage,
   sanitizeMessage,
 } from "../pi/messages";
+import { assignFrameTurns } from "../retention/age";
+import { applyCompressedBlockRetention } from "../retention/compressed-blocks";
+import { getStaleToolCallIds, stripStaleToolArtifacts } from "../retention/stale-tools";
 
 export interface TransformContextInput {
   messages: any[];
@@ -22,6 +24,9 @@ export function transformMessagesForContext(input: TransformContextInput): {
   messages: any[];
 } {
   const config = input.config ?? defaultConfig;
+  assignFrameTurns(input.state, input.frames, input.state.turnCounter);
+  const staleToolCallIds = getStaleToolCallIds(input.state, input.state.turnCounter, config);
+  applyCompressedBlockRetention(input.state, input.frames, staleToolCallIds, config);
   const activeBlocks = Array.from(input.state.activeBlockIds)
     .map((id) => input.state.blocks.get(id))
     .filter(
@@ -46,7 +51,9 @@ export function transformMessagesForContext(input: TransformContextInput): {
       );
     }
     if (compressedEntryIds.has(frame.entryId)) continue;
-    const message = sanitizeMessage(cloneMessage(frame.message));
+    const stripped = stripStaleToolArtifacts(frame.message, staleToolCallIds);
+    if (!stripped) continue;
+    const message = sanitizeMessage(stripped);
     appendTextToMessage(message, formatMessageIdTag(frame.ref));
     transformed.push(message);
   }

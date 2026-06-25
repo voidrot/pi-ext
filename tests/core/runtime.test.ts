@@ -36,7 +36,20 @@ test("loads runtime config and syncs active tools", () => {
   const runtime = manager.load(createCtx(root, false));
 
   assert.equal(runtime.config.enabled, true);
-  assert.deepEqual(new Set(pi.activeTools), new Set(["read", "compress", "run_subagent", "get_subagent_result", "steer_subagent"]));
+  assert.deepEqual(
+    new Set(pi.activeTools),
+    new Set([
+      "read",
+      "compress",
+      "run_subagent",
+      "get_subagent_result",
+      "steer_subagent",
+      "create_global_memory",
+      "create_project_memory",
+      "create_session_memory",
+      "search_memories",
+    ]),
+  );
 });
 
 test("reload reads changed config and removes disabled owned tool", async () => {
@@ -53,6 +66,7 @@ test("reload reads changed config and removes disabled owned tool", async () => 
       modules: {
         dcp: { tools: { compress: { enabled: false } } },
         agents: { enabled: false },
+        memory: { enabled: false },
       },
     }),
   );

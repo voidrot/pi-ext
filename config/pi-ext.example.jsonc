@@ -13,7 +13,12 @@
         "compress": {
           "permission": "allow",
           "maxContextLimit": "80%",
-          "minContextLimit": "40%"
+          "minContextLimit": "40%",
+          "summaryTiers": [
+            { "minTurns": 0, "maxSummaryRatio": 0.4 },
+            { "minTurns": 5, "maxSummaryRatio": 0.25 },
+            { "minTurns": 15, "maxSummaryRatio": 0.12 }
+          ]
         },
         "ui": {
           "compressedBlocksWidget": true,
@@ -21,7 +26,12 @@
         },
         "strategies": {
           "deduplication": { "enabled": true },
-          "purgeErrors": { "enabled": true, "turns": 4 }
+          "purgeErrors": { "enabled": true, "turns": 4 },
+          "staleToolCalls": {
+            "enabled": true,
+            "turns": 5,
+            "protectedTools": ["read", "edit", "write"]
+          }
         }
       }
     },
@@ -56,6 +66,37 @@
         "enabled": true,
         "timeoutMs": 120000,
         "notify": true
+      }
+    },
+    "memory": {
+      "enabled": true,
+      "prompt": {
+        "enabled": true,
+        "maxMemoriesPerScope": 12,
+        "maxContentChars": 500
+      },
+      "tools": {
+        "createGlobalMemory": { "enabled": true },
+        "createProjectMemory": { "enabled": true },
+        "createSessionMemory": { "enabled": true },
+        "searchMemories": { "enabled": true }
+      },
+      "vector": {
+        "enabled": true,
+        // "local" uses pi-ext's deterministic lexical embedder; "ollama" calls /api/embed.
+        "provider": "local",
+        "dimensions": 256,
+        "searchLimit": 8,
+        "background": {
+          "enabled": true,
+          "batchSize": 10
+        },
+        "ollama": {
+          "endpoint": "http://127.0.0.1:11434",
+          "model": "nomic-embed-text",
+          "timeoutMs": 30000
+          // "keepAlive": "5m"
+        }
       }
     }
   }

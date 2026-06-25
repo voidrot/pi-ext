@@ -60,6 +60,37 @@ export interface AgentsModuleConfig {
   };
 }
 
+export interface MemoryModuleConfig {
+  enabled: boolean;
+  prompt: {
+    enabled: boolean;
+    maxMemoriesPerScope: number;
+    maxContentChars: number;
+  };
+  tools: {
+    createGlobalMemory: ToolToggleConfig;
+    createProjectMemory: ToolToggleConfig;
+    createSessionMemory: ToolToggleConfig;
+    searchMemories: ToolToggleConfig;
+  };
+  vector: {
+    enabled: boolean;
+    provider: "local" | "ollama";
+    dimensions: 256;
+    searchLimit: number;
+    background: {
+      enabled: boolean;
+      batchSize: number;
+    };
+    ollama: {
+      endpoint: string;
+      model: string;
+      timeoutMs: number;
+      keepAlive?: string;
+    };
+  };
+}
+
 export interface PiExtConfig {
   enabled: boolean;
   debug: boolean;
@@ -67,6 +98,7 @@ export interface PiExtConfig {
     dcp: DcpModuleConfig;
     dashboard: DashboardModuleConfig;
     agents: AgentsModuleConfig;
+    memory: MemoryModuleConfig;
   };
 }
 
@@ -128,6 +160,35 @@ export const defaultPiExtConfig: PiExtConfig = {
         enabled: true,
         timeoutMs: 120_000,
         notify: true,
+      },
+    },
+    memory: {
+      enabled: true,
+      prompt: {
+        enabled: true,
+        maxMemoriesPerScope: 12,
+        maxContentChars: 500,
+      },
+      tools: {
+        createGlobalMemory: { enabled: true },
+        createProjectMemory: { enabled: true },
+        createSessionMemory: { enabled: true },
+        searchMemories: { enabled: true },
+      },
+      vector: {
+        enabled: true,
+        provider: "local",
+        dimensions: 256,
+        searchLimit: 8,
+        background: {
+          enabled: true,
+          batchSize: 10,
+        },
+        ollama: {
+          endpoint: "http://127.0.0.1:11434",
+          model: "nomic-embed-text",
+          timeoutMs: 30_000,
+        },
       },
     },
   },
@@ -217,6 +278,16 @@ function normalizeConfig(value: unknown): PiExtConfig {
   const childExtensions: Record<string, any> = isPlainObject(agents.childExtensions) ? agents.childExtensions : {};
   const transcripts: Record<string, any> = isPlainObject(agents.transcripts) ? agents.transcripts : {};
   const stall: Record<string, any> = isPlainObject(agents.stall) ? agents.stall : {};
+  const memory: Record<string, any> = isPlainObject(source.modules?.memory) ? source.modules.memory : {};
+  const memoryPrompt: Record<string, any> = isPlainObject(memory.prompt) ? memory.prompt : {};
+  const memoryTools: Record<string, any> = isPlainObject(memory.tools) ? memory.tools : {};
+  const createGlobalMemoryTool: Record<string, any> = isPlainObject(memoryTools.createGlobalMemory) ? memoryTools.createGlobalMemory : {};
+  const createProjectMemoryTool: Record<string, any> = isPlainObject(memoryTools.createProjectMemory) ? memoryTools.createProjectMemory : {};
+  const createSessionMemoryTool: Record<string, any> = isPlainObject(memoryTools.createSessionMemory) ? memoryTools.createSessionMemory : {};
+  const searchMemoriesTool: Record<string, any> = isPlainObject(memoryTools.searchMemories) ? memoryTools.searchMemories : {};
+  const memoryVector: Record<string, any> = isPlainObject(memory.vector) ? memory.vector : {};
+  const memoryVectorBackground: Record<string, any> = isPlainObject(memoryVector.background) ? memoryVector.background : {};
+  const memoryVectorOllama: Record<string, any> = isPlainObject(memoryVector.ollama) ? memoryVector.ollama : {};
 
   return {
     enabled: boolOr(source.enabled, defaultPiExtConfig.enabled),
@@ -284,6 +355,47 @@ function normalizeConfig(value: unknown): PiExtConfig {
           abortAfterMs: optionalPositiveInt(stall.abortAfterMs, defaultPiExtConfig.modules.agents.stall.abortAfterMs),
         },
       },
+      memory: {
+        enabled: boolOr(memory.enabled, defaultPiExtConfig.modules.memory.enabled),
+        prompt: {
+          enabled: boolOr(memoryPrompt.enabled, defaultPiExtConfig.modules.memory.prompt.enabled),
+          maxMemoriesPerScope: positiveIntOr(
+            memoryPrompt.maxMemoriesPerScope,
+            defaultPiExtConfig.modules.memory.prompt.maxMemoriesPerScope,
+          ),
+          maxContentChars: positiveIntOr(memoryPrompt.maxContentChars, defaultPiExtConfig.modules.memory.prompt.maxContentChars),
+        },
+        tools: {
+          createGlobalMemory: {
+            enabled: boolOr(createGlobalMemoryTool.enabled, defaultPiExtConfig.modules.memory.tools.createGlobalMemory.enabled),
+          },
+          createProjectMemory: {
+            enabled: boolOr(createProjectMemoryTool.enabled, defaultPiExtConfig.modules.memory.tools.createProjectMemory.enabled),
+          },
+          createSessionMemory: {
+            enabled: boolOr(createSessionMemoryTool.enabled, defaultPiExtConfig.modules.memory.tools.createSessionMemory.enabled),
+          },
+          searchMemories: {
+            enabled: boolOr(searchMemoriesTool.enabled, defaultPiExtConfig.modules.memory.tools.searchMemories.enabled),
+          },
+        },
+        vector: {
+          enabled: boolOr(memoryVector.enabled, defaultPiExtConfig.modules.memory.vector.enabled),
+          provider: memoryVectorProviderOr(memoryVector.provider, defaultPiExtConfig.modules.memory.vector.provider),
+          dimensions: 256,
+          searchLimit: positiveIntOr(memoryVector.searchLimit, defaultPiExtConfig.modules.memory.vector.searchLimit),
+          background: {
+            enabled: boolOr(memoryVectorBackground.enabled, defaultPiExtConfig.modules.memory.vector.background.enabled),
+            batchSize: positiveIntOr(memoryVectorBackground.batchSize, defaultPiExtConfig.modules.memory.vector.background.batchSize),
+          },
+          ollama: {
+            endpoint: stringOr(memoryVectorOllama.endpoint, defaultPiExtConfig.modules.memory.vector.ollama.endpoint),
+            model: stringOr(memoryVectorOllama.model, defaultPiExtConfig.modules.memory.vector.ollama.model),
+            timeoutMs: positiveIntOr(memoryVectorOllama.timeoutMs, defaultPiExtConfig.modules.memory.vector.ollama.timeoutMs),
+            keepAlive: optionalString(memoryVectorOllama.keepAlive, defaultPiExtConfig.modules.memory.vector.ollama.keepAlive),
+          },
+        },
+      },
     },
   };
 }
@@ -326,6 +438,14 @@ function optionalPositiveInt(value: unknown, fallback: number | undefined): numb
 
 function childExtensionModeOr(value: unknown, fallback: AgentsChildExtensionMode): AgentsChildExtensionMode {
   return value === "inherit-safe" || value === "none" ? value : fallback;
+}
+
+function memoryVectorProviderOr(value: unknown, fallback: "local" | "ollama"): "local" | "ollama" {
+  return value === "local" || value === "ollama" ? value : fallback;
+}
+
+function optionalString(value: unknown, fallback: string | undefined): string | undefined {
+  return value === undefined ? fallback : typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 }
 
 function stringArrayOr(value: unknown, fallback: string[]): string[] {

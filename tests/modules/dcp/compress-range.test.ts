@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createInitialState } from "../../../src/modules/dcp/state/store";
 import { applyRangeCompression } from "../../../src/modules/dcp/compress/state";
+import { defaultConfig } from "../../../src/modules/dcp/config";
+import { createInitialState } from "../../../src/modules/dcp/state/store";
 
 test("applies range compression and activates a block", () => {
   const state = createInitialState();
@@ -28,10 +29,16 @@ test("applies range compression and activates a block", () => {
     },
   ];
 
-  const result = applyRangeCompression(state, frames, "origin", {
-    topic: "closed work",
-    content: [{ startId: "m0001", endId: "m0002", summary: "finished work" }],
-  });
+  const result = applyRangeCompression(
+    state,
+    frames,
+    "origin",
+    {
+      topic: "closed work",
+      content: [{ startId: "m0001", endId: "m0002", summary: "finished work" }],
+    },
+    defaultConfig,
+  );
 
   assert.deepEqual(result.blockIds, [1]);
   assert.equal(state.blocks.get(1)?.anchorEntryId, "e1");

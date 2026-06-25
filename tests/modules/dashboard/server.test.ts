@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { createDashboardMemoriesPayload } from "../../../src/modules/dashboard/memories";
 import { createDashboardApp, DashboardServer, type DashboardServerSnapshot } from "../../../src/modules/dashboard/server";
 
 function snapshot(overrides: Partial<DashboardServerSnapshot> = {}): DashboardServerSnapshot {
@@ -81,6 +82,54 @@ test("creates a Hono app that serves health, JSON, shadcn/Tailwind HTML, and 404
 
   const missing = await app.request("/missing");
   assert.equal(missing.status, 404);
+});
+
+test("serves stored memories as JSON and HTML by scope", async () => {
+  const app = createDashboardApp({
+    getStatus: () => ({
+      dashboard: {
+        instanceId: "dash-1",
+        startedAt: "2026-06-24T12:00:00.000Z",
+        url: "http://127.0.0.1:17380/",
+        host: "127.0.0.1",
+        port: 17380,
+      },
+      session: { cwd: "/tmp/project", projectTrusted: true },
+      runtime: { debug: false, enabled: true, modules: { dcp: true, dashboard: true } },
+      database: { global: { path: "/home/me/.pi/pi-ext.db" } },
+    }),
+    getMemories: async (scope) => createDashboardMemoriesPayload({
+      selectedScope: scope,
+      memories: {
+        global: [],
+        project: [
+          {
+            id: "project-1",
+            scope: "project",
+            content: "Project memory",
+            tags: ["project"],
+            importance: 5,
+            createdAt: "2026-06-24T12:00:00.000Z",
+            updatedAt: "2026-06-24T12:00:00.000Z",
+          },
+        ],
+        session: [],
+      },
+    }),
+  });
+
+  const jsonResponse = await app.request("/api/memories/project");
+  assert.equal(jsonResponse.status, 200);
+  assert.equal(jsonResponse.headers.get("content-type"), "application/json; charset=utf-8");
+  const json = (await jsonResponse.json()) as any;
+  assert.equal(json.selectedScope, "project");
+  assert.equal(json.visibleMemories[0].id, "project-1");
+
+  const page = await app.request("/memories/project");
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /Stored memories/);
+  assert.match(html, /Project memory/);
 });
 
 test("returns a startup guard when status is requested before server state is ready", async () => {

@@ -2,7 +2,9 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { openUrlInBrowser, type BrowserOpener } from "../../core/browser";
 import type { DashboardModuleConfig } from "../../core/config";
 import type { ModuleApi, PiExtModule } from "../../core/modules";
-import { DashboardServer, type DashboardServerConfig, type DashboardServerSnapshot, type DashboardServerState } from "./server";
+import { DashboardServer, type DashboardServerConfig, type DashboardServerOptions, type DashboardServerSnapshot, type DashboardServerState } from "./server";
+import { createDashboardMemoriesPayload } from "./memories";
+import { listStoredMemories } from "../memory/repository";
 
 interface DashboardServerLike {
   start(snapshot: DashboardServerSnapshot): Promise<DashboardServerState>;
@@ -12,7 +14,7 @@ interface DashboardServerLike {
 }
 
 export interface DashboardModuleOptions {
-  createServer?: (config: DashboardServerConfig) => DashboardServerLike;
+  createServer?: (config: DashboardServerConfig, options: DashboardServerOptions) => DashboardServerLike;
   openBrowser?: BrowserOpener;
 }
 
@@ -29,10 +31,11 @@ export function createDashboardModule(options: DashboardModuleOptions = {}): PiE
 }
 
 function registerDashboard(api: ModuleApi, options: DashboardModuleOptions): void {
-  const createServer = options.createServer ?? ((config: DashboardServerConfig) => new DashboardServer(config));
+  const createServer = options.createServer ?? ((config: DashboardServerConfig, serverOptions: DashboardServerOptions) => new DashboardServer(config, serverOptions));
   const openBrowser = options.openBrowser ?? openUrlInBrowser;
   let server: DashboardServerLike | undefined;
   let serverConfigKey: string | undefined;
+  let currentCtx: ExtensionContext | undefined;
 
   const stopServer = async (): Promise<void> => {
     const current = server;
@@ -42,6 +45,7 @@ function registerDashboard(api: ModuleApi, options: DashboardModuleOptions): voi
   };
 
   const ensureServer = async (ctx: ExtensionContext, openReason: "start" | "session-change" | "manual" | "none") => {
+    currentCtx = ctx;
     const runtime = api.getRuntime(ctx);
     const config = runtime.config.modules.dashboard;
     if (!runtime.config.enabled || !config.enabled || !api.isEnabled(ctx, "dashboard")) {
@@ -58,7 +62,18 @@ function registerDashboard(api: ModuleApi, options: DashboardModuleOptions): voi
     let state = server?.getState();
 
     if (!server) {
-      server = createServer(config.server);
+      server = createServer(config.server, {
+        getMemories: async (scope) => {
+          const memoryCtx = currentCtx;
+          if (!memoryCtx) {
+            return createDashboardMemoriesPayload({ selectedScope: scope, memories: { global: [], project: [], session: [] } });
+          }
+          const databases = await api.getDatabases(memoryCtx);
+          const sessionId = memoryCtx.sessionManager.getSessionId?.();
+          const memories = await listStoredMemories(databases, { sessionId, limitPerScope: 200 });
+          return createDashboardMemoriesPayload({ selectedScope: scope, memories });
+        },
+      });
       serverConfigKey = nextServerConfigKey;
       state = await server.start(snapshot);
     } else {

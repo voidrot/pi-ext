@@ -7,7 +7,7 @@ import { transformMessagesForContext } from "./context/transform";
 import { Logger } from "./logger";
 import { createFramesFromMessages } from "./pi/branch";
 import { SYSTEM_PROMPT } from "./prompts";
-import { createInitialState, restoreStateFromBranch } from "./state/store";
+import { appendStateEntry, createInitialState, restoreStateFromBranch } from "./state/store";
 import type { DcpState } from "./state/types";
 import { registerCompressTool } from "./tools/compress";
 import { clearDcpWidget, showDcpStatsOverlay, syncDcpWidget } from "./ui";
@@ -108,6 +108,40 @@ function registerDcp(api: ModuleApi): void {
       contextWindow,
       config: current.config,
     });
+  });
+
+  pi.on("tool_execution_start", async (event, ctx) => {
+    if (!api.isEnabled(ctx, "dcp")) return;
+    const current = getRuntime(ctx);
+    if (!current.config.enabled) return;
+    current.state.toolCalls.set(event.toolCallId, {
+      id: event.toolCallId,
+      toolName: event.toolName,
+      turn: current.state.turnCounter,
+      status: "running",
+    });
+  });
+
+  pi.on("tool_execution_end", async (event, ctx) => {
+    if (!api.isEnabled(ctx, "dcp")) return;
+    const current = getRuntime(ctx);
+    if (!current.config.enabled) return;
+    const existing = current.state.toolCalls.get(event.toolCallId);
+    current.state.toolCalls.set(event.toolCallId, {
+      id: event.toolCallId,
+      toolName: event.toolName,
+      turn: existing?.turn ?? current.state.turnCounter,
+      status: event.isError ? "error" : "completed",
+    });
+  });
+
+  pi.on("turn_end", async (_event, ctx) => {
+    if (!api.isEnabled(ctx, "dcp")) return;
+    const current = getRuntime(ctx);
+    if (!current.config.enabled) return;
+    current.state.turnCounter += 1;
+    appendStateEntry(pi, current.state);
+    refreshWidget(ctx, current);
   });
 
   pi.registerCommand("dcp", {

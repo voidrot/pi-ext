@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { CompressionBlock, DcpState, SerializedDcpState } from "./types";
+import type { CompressionBlock, DcpState, SerializedDcpState, ToolCallRecord } from "./types";
 
 export const DCP_STATE_CUSTOM_TYPE = "pi-dcp-state";
 
@@ -13,6 +13,8 @@ export function createInitialState(): DcpState {
     activeBlockIds: new Set<number>(),
     totalCompressedTokens: 0,
     turnCounter: 0,
+    toolCalls: new Map<string, ToolCallRecord>(),
+    messageTurns: new Map<string, number>(),
   };
 }
 
@@ -26,6 +28,8 @@ export function serializeState(state: DcpState): SerializedDcpState {
     activeBlockIds: Array.from(state.activeBlockIds),
     totalCompressedTokens: state.totalCompressedTokens,
     turnCounter: state.turnCounter,
+    toolCalls: Array.from(state.toolCalls.entries()),
+    messageTurns: Array.from(state.messageTurns.entries()),
   };
 }
 
@@ -62,6 +66,33 @@ export function deserializeState(input: unknown): DcpState {
     for (const id of raw.activeBlockIds) {
       if (Number.isInteger(id) && id > 0 && state.blocks.has(id))
         state.activeBlockIds.add(id);
+    }
+  }
+  if (Array.isArray(raw.toolCalls)) {
+    for (const [id, record] of raw.toolCalls) {
+      if (
+        typeof id === "string" &&
+        record &&
+        typeof record === "object" &&
+        record.id === id &&
+        typeof record.toolName === "string" &&
+        typeof record.turn === "number" &&
+        ["pending", "running", "completed", "error"].includes(record.status)
+      ) {
+        state.toolCalls.set(id, {
+          id,
+          toolName: record.toolName,
+          turn: Math.max(0, Math.floor(record.turn)),
+          status: record.status,
+        });
+      }
+    }
+  }
+  if (Array.isArray(raw.messageTurns)) {
+    for (const [entryId, turn] of raw.messageTurns) {
+      if (typeof entryId === "string" && typeof turn === "number") {
+        state.messageTurns.set(entryId, Math.max(0, Math.floor(turn)));
+      }
     }
   }
   return state;

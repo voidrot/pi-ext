@@ -28,6 +28,26 @@ export const ownedTools: OwnedTool[] = [
     moduleId: "agents",
     enabled: (config) => config.enabled && config.modules.agents.enabled && config.modules.agents.tools.steerSubagent.enabled,
   },
+  {
+    name: "create_global_memory",
+    moduleId: "memory",
+    enabled: (config) => config.enabled && config.modules.memory.enabled && config.modules.memory.tools.createGlobalMemory.enabled,
+  },
+  {
+    name: "create_project_memory",
+    moduleId: "memory",
+    enabled: (config) => config.enabled && config.modules.memory.enabled && config.modules.memory.tools.createProjectMemory.enabled,
+  },
+  {
+    name: "create_session_memory",
+    moduleId: "memory",
+    enabled: (config) => config.enabled && config.modules.memory.enabled && config.modules.memory.tools.createSessionMemory.enabled,
+  },
+  {
+    name: "search_memories",
+    moduleId: "memory",
+    enabled: (config) => config.enabled && config.modules.memory.enabled && config.modules.memory.tools.searchMemories.enabled && config.modules.memory.vector.enabled,
+  },
 ];
 
 export function reconcileActiveTools(activeTools: string[], config: PiExtConfig): string[] {

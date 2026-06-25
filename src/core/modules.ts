@@ -4,7 +4,7 @@ import type { MigrationMap } from "./database/registry";
 import type { DatabaseScope } from "./database/schema";
 import type { PiExtRuntime, RuntimeReloadListener } from "./runtime";
 
-export type ModuleId = "dcp" | "dashboard" | "agents";
+export type ModuleId = "dcp" | "dashboard" | "agents" | "memory";
 
 export interface ModuleApi {
   pi: ExtensionAPI;

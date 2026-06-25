@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
 import { createDashboardStatus, renderDashboardHtml, type DashboardStatusPayload } from "./render";
+import { createDashboardMemoriesPayload, selectDashboardMemoryScope, type DashboardMemoriesPayload, type DashboardMemoryScope } from "./memories";
+import { renderDashboardMemoriesHtml } from "./memory-render";
 import type { DashboardModuleConfig } from "../../core/config";
 
 export type DashboardServerConfig = DashboardModuleConfig["server"];
@@ -31,6 +33,11 @@ export interface DashboardServerState {
 
 export interface DashboardAppOptions {
   getStatus: () => DashboardStatusPayload;
+  getMemories?: (scope: DashboardMemoryScope) => Promise<DashboardMemoriesPayload>;
+}
+
+export interface DashboardServerOptions {
+  getMemories?: (scope: DashboardMemoryScope) => Promise<DashboardMemoriesPayload>;
 }
 
 const statusBeforeStartupMessage = "Dashboard server status requested before startup";
@@ -48,6 +55,23 @@ export function createDashboardApp(options: DashboardAppOptions): Hono {
     return c.body(JSON.stringify(status), 200, { "content-type": "application/json; charset=utf-8" });
   });
 
+  app.get("/api/memories", async (c) => {
+    const memories = await getMemories(options, "combined");
+    return c.body(JSON.stringify(memories), 200, { "content-type": "application/json; charset=utf-8" });
+  });
+
+  app.get("/api/memories/:scope", async (c) => {
+    const memories = await getMemories(options, selectDashboardMemoryScope(c.req.param("scope")));
+    return c.body(JSON.stringify(memories), 200, { "content-type": "application/json; charset=utf-8" });
+  });
+
+  app.get("/memories", async (c) => c.html(renderDashboardMemoriesHtml(await getMemories(options, "combined"))));
+
+  app.get("/memories/:scope", async (c) => {
+    const memories = await getMemories(options, selectDashboardMemoryScope(c.req.param("scope")));
+    return c.html(renderDashboardMemoriesHtml(memories));
+  });
+
   app.get("/", (c) => {
     const status = getStatusOrStartup(options.getStatus);
     if (!status) return c.html("<!doctype html><title>Pi Ext Dashboard</title><h1>Dashboard starting</h1>", 503);
@@ -57,6 +81,14 @@ export function createDashboardApp(options: DashboardAppOptions): Hono {
   app.notFound((c) => c.text("not found", 404));
 
   return app;
+}
+
+async function getMemories(options: DashboardAppOptions, scope: DashboardMemoryScope): Promise<DashboardMemoriesPayload> {
+  if (options.getMemories) return options.getMemories(scope);
+  return createDashboardMemoriesPayload({
+    selectedScope: scope,
+    memories: { global: [], project: [], session: [] },
+  });
 }
 
 function getStatusOrStartup(getStatus: () => DashboardStatusPayload): DashboardStatusPayload | undefined {
@@ -73,7 +105,7 @@ export class DashboardServer {
   private state: DashboardServerState | undefined;
   private snapshot: DashboardServerSnapshot | undefined;
 
-  constructor(private readonly config: DashboardServerConfig) {}
+  constructor(private readonly config: DashboardServerConfig, private readonly options: DashboardServerOptions = {}) {}
 
   async start(snapshot: DashboardServerSnapshot): Promise<DashboardServerState> {
     this.snapshot = snapshot;
@@ -84,7 +116,7 @@ export class DashboardServer {
 
     for (const port of ports) {
       try {
-        const app = createDashboardApp({ getStatus: () => this.createStatus() });
+        const app = createDashboardApp({ getStatus: () => this.createStatus(), getMemories: this.options.getMemories });
         const server = createAdaptorServer({ fetch: app.fetch }) as Server;
         await listen(server, this.config.host, port);
         const address = server.address();

@@ -54,6 +54,39 @@ test("merges DCP UI toggles from central config", () => {
   assert.equal(config.ui.compressionNotifications, false);
 });
 
+test("defaults stale tool stripping and summary tiers", () => {
+  const config = mergeDcpConfig({});
+
+  assert.equal(config.strategies.staleToolCalls.enabled, true);
+  assert.equal(config.strategies.staleToolCalls.turns, 5);
+  assert.deepEqual(config.compress.summaryTiers, [
+    { minTurns: 0, maxSummaryRatio: 0.4 },
+    { minTurns: 5, maxSummaryRatio: 0.25 },
+    { minTurns: 15, maxSummaryRatio: 0.12 },
+  ]);
+});
+
+test("merges stale tool and summary tier overrides safely", () => {
+  const config = mergeDcpConfig({
+    strategies: {
+      staleToolCalls: { turns: 0, protectedTools: ["read", "custom", "custom"] },
+    },
+    compress: {
+      summaryTiers: [
+        { minTurns: 0, maxSummaryRatio: 0.5 },
+        { minTurns: 20, maxSummaryRatio: 0.08 },
+      ],
+    },
+  });
+
+  assert.equal(config.strategies.staleToolCalls.turns, 1);
+  assert.deepEqual(config.strategies.staleToolCalls.protectedTools, ["read", "custom"]);
+  assert.deepEqual(config.compress.summaryTiers, [
+    { minTurns: 0, maxSummaryRatio: 0.5 },
+    { minTurns: 20, maxSummaryRatio: 0.08 },
+  ]);
+});
+
 test("does not mutate default config", () => {
   const before = defaultConfig.compress.mode;
   const config = mergeDcpConfig({ compress: { mode: "message" } });

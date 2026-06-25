@@ -1,5 +1,12 @@
 export type CompressionMode = "range" | "message";
 
+export interface ToolCallRecord {
+  id: string;
+  toolName: string;
+  turn: number;
+  status: "pending" | "running" | "completed" | "error";
+}
+
 export interface CompressionBlock {
   blockId: number;
   runId: number;
@@ -18,6 +25,7 @@ export interface CompressionBlock {
   compressedTokens: number;
   summaryTokens: number;
   createdAt: number;
+  createdTurn?: number;
   summary: string;
 }
 
@@ -30,6 +38,8 @@ export interface DcpState {
   activeBlockIds: Set<number>;
   totalCompressedTokens: number;
   turnCounter: number;
+  toolCalls: Map<string, ToolCallRecord>;
+  messageTurns: Map<string, number>;
 }
 
 export interface SerializedDcpState {
@@ -41,6 +51,8 @@ export interface SerializedDcpState {
   activeBlockIds: number[];
   totalCompressedTokens: number;
   turnCounter: number;
+  toolCalls?: Array<[string, ToolCallRecord]>;
+  messageTurns?: Array<[string, number]>;
 }
 
 export interface ContextFrame {

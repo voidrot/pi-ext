@@ -1,4 +1,6 @@
+import type { DcpConfig } from "../config";
 import { formatBlockRef, parseBlockRef } from "../message-ids";
+import { getYoungestFrameAgeTurns, selectSummaryTier } from "../retention/age";
 import { estimateTokens } from "../token";
 import type { CompressionBlock, ContextFrame, DcpState } from "../state/types";
 import {
@@ -30,6 +32,7 @@ export function applyRangeCompression(
   frames: ContextFrame[],
   originEntryId: string,
   args: RangeCompressionArgs,
+  config: DcpConfig,
 ): CompressionApplyResult {
   if (!args.topic.trim()) throw new Error("Compression topic is required");
   const selections = args.content.map((entry) => ({
@@ -57,6 +60,7 @@ export function applyRangeCompression(
       frames: selection.frames,
       consumedBlockIds: selection.consumedBlockIds,
       summary,
+      config,
     });
     blockIds.push(result.blockId);
     compressedTokens += result.compressedTokens;
@@ -70,6 +74,7 @@ export function applyMessageCompression(
   frames: ContextFrame[],
   originEntryId: string,
   args: MessageCompressionArgs,
+  config: DcpConfig,
 ): CompressionApplyResult {
   if (!args.topic.trim()) throw new Error("Compression topic is required");
   const runId = allocateRunId(state);
@@ -88,6 +93,7 @@ export function applyMessageCompression(
       frames: [frame],
       consumedBlockIds: [],
       summary: entry.summary,
+      config,
     });
     blockIds.push(result.blockId);
     compressedTokens += result.compressedTokens;
@@ -108,11 +114,25 @@ function createBlock(
     frames: ContextFrame[];
     consumedBlockIds: number[];
     summary: string;
+    config: DcpConfig;
   },
 ): CompressionBlock & { blockId: number } {
   if (input.frames.length === 0)
     throw new Error("Cannot compress an empty selection");
   if (!input.summary.trim()) throw new Error("Compression summary is required");
+  const compressedTokens = input.frames.reduce(
+    (sum, frame) => sum + frame.tokenCount,
+    0,
+  );
+  const summaryTokens = estimateTokens(input.summary);
+  const ageTurns = getYoungestFrameAgeTurns(state, input.frames, state.turnCounter);
+  const tier = selectSummaryTier(input.config.compress.summaryTiers, ageTurns);
+  const maxSummaryTokens = Math.max(1, Math.floor(compressedTokens * tier.maxSummaryRatio));
+  if (summaryTokens > maxSummaryTokens) {
+    throw new Error(
+      `Compression summary too long for ${ageTurns}-turn-old content: ${summaryTokens} estimated tokens exceeds ${maxSummaryTokens} (${Math.round(tier.maxSummaryRatio * 100)}% tier)`,
+    );
+  }
   const blockId = allocateBlockId(state);
   const effectiveEntryIds = new Set(input.frames.map((frame) => frame.entryId));
   const effectiveToolCallIds = new Set(
@@ -126,11 +146,6 @@ function createBlock(
     consumed.effectiveEntryIds.forEach((id) => effectiveEntryIds.add(id));
     consumed.effectiveToolCallIds.forEach((id) => effectiveToolCallIds.add(id));
   }
-  const compressedTokens = input.frames.reduce(
-    (sum, frame) => sum + frame.tokenCount,
-    0,
-  );
-  const summaryTokens = estimateTokens(input.summary);
   const block: CompressionBlock = {
     blockId,
     runId: input.runId,
@@ -151,6 +166,7 @@ function createBlock(
     compressedTokens,
     summaryTokens,
     createdAt: Date.now(),
+    createdTurn: state.turnCounter,
     summary: input.summary.trim(),
   };
   state.blocks.set(blockId, block);

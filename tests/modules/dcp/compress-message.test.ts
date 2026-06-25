@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createInitialState } from "../../../src/modules/dcp/state/store";
 import { applyMessageCompression } from "../../../src/modules/dcp/compress/state";
+import { defaultConfig } from "../../../src/modules/dcp/config";
+import { createInitialState } from "../../../src/modules/dcp/state/store";
 
 test("applies message compression for selected messages", () => {
   const state = createInitialState();
@@ -15,10 +16,16 @@ test("applies message compression for selected messages", () => {
       role: "user",
     },
   ];
-  const result = applyMessageCompression(state, frames, "origin", {
-    topic: "batch",
-    content: [{ messageId: "m0001", topic: "old work", summary: "summary" }],
-  });
+  const result = applyMessageCompression(
+    state,
+    frames,
+    "origin",
+    {
+      topic: "batch",
+      content: [{ messageId: "m0001", topic: "old work", summary: "summary" }],
+    },
+    defaultConfig,
+  );
   assert.deepEqual(result.blockIds, [1]);
   assert.equal(state.blocks.get(1)?.mode, "message");
   assert.equal(state.blocks.get(1)?.topic, "old work");

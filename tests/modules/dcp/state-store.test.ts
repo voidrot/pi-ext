@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createInitialState,
+  deserializeState,
   restoreStateFromBranch,
   serializeState,
 } from "../../../src/modules/dcp/state/store";
@@ -29,6 +30,27 @@ test("restores latest pi-dcp-state custom entry from branch", () => {
   const restored = restoreStateFromBranch(branch);
   assert.equal(restored.nextBlockId, 4);
   assert.equal(restored.manualMode, false);
+});
+
+test("serializes new DCP retention metadata", () => {
+  const state = createInitialState();
+  state.toolCalls.set("call_1", {
+    id: "call_1",
+    toolName: "bash",
+    turn: 2,
+    status: "completed",
+  });
+  state.messageTurns.set("e1", 2);
+
+  const restored = deserializeState(serializeState(state));
+
+  assert.deepEqual(restored.toolCalls.get("call_1"), {
+    id: "call_1",
+    toolName: "bash",
+    turn: 2,
+    status: "completed",
+  });
+  assert.equal(restored.messageTurns.get("e1"), 2);
 });
 
 test("falls back to initial state when no state entries exist", () => {

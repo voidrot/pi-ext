@@ -112,6 +112,9 @@ function DashboardPage(props: { status: DashboardStatusPayload }) {
                   <ButtonLink href="/api/status" variant="outline">
                     JSON status
                   </ButtonLink>
+                  <ButtonLink href="/memories" variant="default">
+                    Stored memories
+                  </ButtonLink>
                   <ButtonLink href="/healthz" variant="secondary">
                     Health check
                   </ButtonLink>
@@ -165,9 +168,9 @@ function Pill(props: { label: string; value: string }) {
   );
 }
 
-const tailwindStyleAttributes: Record<string, string> = { type: "text/tailwindcss" };
+export const tailwindStyleAttributes: Record<string, string> = { type: "text/tailwindcss" };
 
-const tailwindTheme = String.raw`
+export const tailwindTheme = String.raw`
 @custom-variant dark (&:is(.dark *));
 
 :root {
