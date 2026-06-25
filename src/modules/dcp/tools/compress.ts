@@ -11,6 +11,7 @@ import type { DcpConfig } from "../config";
 import { createFramesFromMessages } from "../pi/branch";
 import { appendStateEntry } from "../state/store";
 import type { DcpState } from "../state/types";
+import { notifyCompression, syncDcpWidget } from "../ui";
 
 const rangeSchema = Type.Object({
   topic: Type.String({ description: "Short label for this compression batch" }),
@@ -85,6 +86,8 @@ export function registerCompressTool(
           ? applyMessageCompression(state, frames, originEntryId, input)
           : applyRangeCompression(state, frames, originEntryId, input);
       appendStateEntry(pi, state);
+      syncDcpWidget(ctx, state, config.ui);
+      notifyCompression(ctx, state, result, config);
       return {
         content: [
           {

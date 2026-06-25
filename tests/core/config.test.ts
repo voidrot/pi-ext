@@ -94,6 +94,50 @@ test("merges module config without losing defaults", () => {
   assert.deepEqual(config.modules.dcp.config, { compress: { permission: "deny" } });
 });
 
+test("accepts top-level dcp config shorthand for global DCP settings", () => {
+  const config = mergePiExtConfig(defaultPiExtConfig, {
+    dcp: {
+      ui: { compressedBlocksWidget: false },
+      compress: { permission: "deny" },
+    },
+  });
+
+  assert.deepEqual(config.modules.dcp.config, {
+    ui: { compressedBlocksWidget: false },
+    compress: { permission: "deny" },
+  });
+});
+
+test("explicit module DCP config overrides top-level dcp shorthand", () => {
+  const config = mergePiExtConfig(defaultPiExtConfig, {
+    dcp: { ui: { compressedBlocksWidget: false, compressionNotifications: false } },
+    modules: {
+      dcp: {
+        config: {
+          ui: { compressedBlocksWidget: true },
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(config.modules.dcp.config, {
+    ui: { compressedBlocksWidget: true, compressionNotifications: false },
+  });
+});
+
+test("later top-level dcp shorthand overrides earlier top-level dcp shorthand", () => {
+  const first = mergePiExtConfig(defaultPiExtConfig, {
+    dcp: { ui: { compressedBlocksWidget: false, compressionNotifications: true } },
+  });
+  const second = mergePiExtConfig(first, {
+    dcp: { ui: { compressedBlocksWidget: true } },
+  });
+
+  assert.deepEqual(second.modules.dcp.config, {
+    ui: { compressedBlocksWidget: true, compressionNotifications: true },
+  });
+});
+
 test("reports config paths in load order", () => {
   const root = mkdtempSync(join(tmpdir(), "pi-ext-config-"));
   const paths = getPiExtConfigPaths({ cwd: root, agentDir: join(root, "agent"), projectTrusted: true });

@@ -10,6 +10,7 @@ import { SYSTEM_PROMPT } from "./prompts";
 import { createInitialState, restoreStateFromBranch } from "./state/store";
 import type { DcpState } from "./state/types";
 import { registerCompressTool } from "./tools/compress";
+import { clearDcpWidget, showDcpStatsOverlay, syncDcpWidget } from "./ui";
 
 interface Runtime {
   config: DcpConfig;
@@ -57,14 +58,31 @@ function registerDcp(api: ModuleApi): void {
     return runtime;
   };
 
+  const refreshWidget = (ctx: ExtensionContext, current: Runtime): void => {
+    if (!current.config.enabled) {
+      clearDcpWidget(ctx);
+      return;
+    }
+    syncDcpWidget(ctx, current.state, current.config.ui);
+  };
+
   pi.on("session_start", async (_event, ctx) => {
     runtime = undefined;
-    getRuntime(ctx);
+    refreshWidget(ctx, getRuntime(ctx));
   });
 
   pi.on("session_tree", async (_event, ctx) => {
     runtime = undefined;
-    getRuntime(ctx);
+    refreshWidget(ctx, getRuntime(ctx));
+  });
+
+  pi.on("session_shutdown", async (_event, ctx) => {
+    clearDcpWidget(ctx);
+  });
+
+  api.onRuntimeReload((_coreRuntime, ctx) => {
+    runtime = undefined;
+    refreshWidget(ctx, getRuntime(ctx));
   });
 
   pi.on("before_agent_start", async (event, ctx) => {
@@ -99,6 +117,16 @@ function registerDcp(api: ModuleApi): void {
       const current = getRuntime(ctx);
       if (!current.config.enabled) return;
       await handleDcpCommand(pi, args, ctx, current.state);
+    },
+  });
+
+  pi.registerCommand("dcp-stats", {
+    description: "Open high-definition Pi DCP compression stats",
+    handler: async (_args, ctx) => {
+      if (!api.isEnabled(ctx, "dcp")) return;
+      const current = getRuntime(ctx);
+      if (!current.config.enabled) return;
+      await showDcpStatsOverlay(ctx, current.state);
     },
   });
 

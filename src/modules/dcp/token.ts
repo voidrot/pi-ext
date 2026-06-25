@@ -1,7 +1,22 @@
+import { get_encoding, type Tiktoken } from "tiktoken";
+
+const DEFAULT_ENCODING = "cl100k_base";
+let encoder: Tiktoken | undefined;
+
 export function estimateTokens(text: string): number {
   if (!text) return 0;
-  return Math.ceil(text.length / 4);
+  return getTokenEncoder().encode_ordinary(text).length;
 }
+
+function getTokenEncoder(): Tiktoken {
+  if (!encoder) encoder = get_encoding(DEFAULT_ENCODING);
+  return encoder;
+}
+
+process.once("exit", () => {
+  encoder?.free();
+  encoder = undefined;
+});
 
 export function estimateMessageTokens(message: unknown): number {
   return estimateTokens(messageToText(message));

@@ -10,6 +10,9 @@ export default defineConfig({
     "@earendil-works/pi-ai",
     "@earendil-works/pi-coding-agent",
     "@earendil-works/pi-tui",
-    "typebox"
+    "typebox",
+    "tiktoken",
+    "better-sqlite3",
+    "kysely"
   ]
 });

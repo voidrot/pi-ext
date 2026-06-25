@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseBlockRef } from "./message-ids";
 import { deactivateBlock, appendStateEntry } from "./state/store";
 import type { DcpState } from "./state/types";
+import { showDcpStatsOverlay } from "./ui";
 
 export type DcpCommand =
   | { action: "status"; args: string[] }
@@ -48,6 +49,10 @@ export async function handleDcpCommand(
         `Pi DCP manual mode ${enabled ? "enabled" : "disabled"}`,
         "info",
       );
+    return;
+  }
+  if (command.action === "stats") {
+    await showDcpStatsOverlay(ctx, state);
     return;
   }
   if (command.action === "decompress" || command.action === "recompress") {

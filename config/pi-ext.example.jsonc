@@ -15,6 +15,10 @@
           "maxContextLimit": "80%",
           "minContextLimit": "40%"
         },
+        "ui": {
+          "compressedBlocksWidget": true,
+          "compressionNotifications": true
+        },
         "strategies": {
           "deduplication": { "enabled": true },
           "purgeErrors": { "enabled": true, "turns": 4 }

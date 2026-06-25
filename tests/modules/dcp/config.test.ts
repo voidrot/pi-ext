@@ -8,6 +8,8 @@ test("returns defaults when no central overrides are provided", () => {
   assert.equal(config.enabled, true);
   assert.equal(config.compress.mode, "range");
   assert.equal(config.compress.nudgeFrequency, 5);
+  assert.equal(config.ui.compressedBlocksWidget, true);
+  assert.equal(config.ui.compressionNotifications, true);
 });
 
 test("merges central pi-ext dcp config with protected tool dedupe", () => {
@@ -38,6 +40,18 @@ test("sanitizes numeric thresholds from central config", () => {
   assert.equal(config.compress.nudgeFrequency, 1);
   assert.equal(config.compress.iterationNudgeThreshold, 1);
   assert.equal(config.strategies.purgeErrors.turns, 1);
+});
+
+test("merges DCP UI toggles from central config", () => {
+  const config = mergeDcpConfig({
+    ui: {
+      compressedBlocksWidget: false,
+      compressionNotifications: false,
+    },
+  });
+
+  assert.equal(config.ui.compressedBlocksWidget, false);
+  assert.equal(config.ui.compressionNotifications, false);
 });
 
 test("does not mutate default config", () => {

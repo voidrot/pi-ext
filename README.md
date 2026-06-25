@@ -5,7 +5,7 @@ A single Pi.dev package that hosts Voidrot Pi extensions, workflow modules, and 
 ## What is included
 
 - `dcp` — Dynamic Context Pruning for Pi sessions.
-  - Registers `/dcp` and `/dcp-compress` commands.
+  - Registers `/dcp`, `/dcp-stats`, and `/dcp-compress` commands.
   - Registers the `compress` tool when enabled.
   - Rewrites outgoing model context with durable summaries while preserving the session file.
 
@@ -91,9 +91,23 @@ Minimal global config:
           "permission": "allow",
           "maxContextLimit": "80%",
           "minContextLimit": "40%"
+        },
+        "ui": {
+          "compressedBlocksWidget": true,
+          "compressionNotifications": true
         }
       }
     }
+  }
+}
+```
+
+For global DCP-only settings, top-level `dcp` is also accepted as shorthand for `modules.dcp.config`:
+
+```jsonc
+{
+  "dcp": {
+    "ui": { "compressedBlocksWidget": false }
   }
 }
 ```
@@ -130,12 +144,39 @@ Disable only the DCP `compress` tool:
 }
 ```
 
+Disable DCP UI surfaces while keeping compression active:
+
+```jsonc
+{
+  "modules": {
+    "dcp": {
+      "config": {
+        "ui": {
+          "compressedBlocksWidget": false,
+          "compressionNotifications": false
+        }
+      }
+    }
+  }
+}
+```
+
+## SQLite storage
+
+`@voidrot/pi-ext` uses SQLite through Kysely for extension-owned persistent state.
+
+- Global database: `~/.pi/pi-ext.db`
+- Project database: `.pi/pi-ext.db` in trusted projects
+
+Core and modules register migrations at extension startup. Table model files declare whether a table belongs to the global or project database by augmenting `GlobalDatabase` or `ProjectDatabase` from `src/core/database/schema.ts` and exporting a `defineTableModel({ scope, tableName })` descriptor.
+
 ## Commands
 
 - `/pi-ext status` — show top-level module/tool enable state.
 - `/pi-ext config` — show merged runtime config.
 - `/pi-ext reload` — reload `pi-ext.json[c]` without restarting Pi.
-- `/dcp` — show/control DCP state.
+- `/dcp` — show/control DCP state (`/dcp stats` also opens the stats overlay).
+- `/dcp-stats` — open a high-definition overlay with block and token statistics.
 - `/dcp-compress` — ask the model to run one DCP compression pass.
 
 ## Development

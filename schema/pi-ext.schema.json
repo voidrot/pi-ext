@@ -14,6 +14,28 @@
       "type": "boolean",
       "description": "Enable debug logging from @voidrot/pi-ext."
     },
+    "dcp": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Shorthand for global DCP module config, equivalent to modules.dcp.config. Explicit modules.dcp.config values win when both are set.",
+      "properties": {
+        "ui": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "DCP UI surfaces.",
+          "properties": {
+            "compressedBlocksWidget": {
+              "type": "boolean",
+              "description": "Show a persistent widget summarizing active compressed context blocks."
+            },
+            "compressionNotifications": {
+              "type": "boolean",
+              "description": "Show a toast notification after each compression pass."
+            }
+          }
+        }
+      }
+    },
     "modules": {
       "type": "object",
       "additionalProperties": false,
@@ -45,7 +67,24 @@
             "config": {
               "type": "object",
               "description": "DCP module-specific config. See README for supported keys.",
-              "additionalProperties": true
+              "additionalProperties": true,
+              "properties": {
+                "ui": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "DCP UI surfaces.",
+                  "properties": {
+                    "compressedBlocksWidget": {
+                      "type": "boolean",
+                      "description": "Show a persistent widget summarizing active compressed context blocks."
+                    },
+                    "compressionNotifications": {
+                      "type": "boolean",
+                      "description": "Show a toast notification after each compression pass."
+                    }
+                  }
+                }
+              }
             }
           }
         }

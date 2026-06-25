@@ -13,14 +13,18 @@ export interface RuntimeManagerOptions {
   agentDir?: string;
 }
 
+export type RuntimeReloadListener = (runtime: PiExtRuntime, ctx: ExtensionContext) => void;
+
 export interface RuntimeManager {
   load(ctx: ExtensionContext): PiExtRuntime;
   reload(ctx: ExtensionContext): PiExtRuntime;
   syncTools(): void;
+  onReload(listener: RuntimeReloadListener): void;
 }
 
 export function createRuntimeManager(pi: ExtensionAPI, options: RuntimeManagerOptions = {}): RuntimeManager {
   let runtime: PiExtRuntime | undefined;
+  const reloadListeners = new Set<RuntimeReloadListener>();
 
   function load(ctx: ExtensionContext): PiExtRuntime {
     const sessionFile = ctx.sessionManager.getSessionFile?.();
@@ -34,7 +38,15 @@ export function createRuntimeManager(pi: ExtensionAPI, options: RuntimeManagerOp
 
   function reload(ctx: ExtensionContext): PiExtRuntime {
     runtime = undefined;
-    return load(ctx);
+    const next = load(ctx);
+    for (const listener of reloadListeners) {
+      listener(next, ctx);
+    }
+    return next;
+  }
+
+  function onReload(listener: RuntimeReloadListener): void {
+    reloadListeners.add(listener);
   }
 
   function syncTools(): void {
@@ -53,5 +65,5 @@ export function createRuntimeManager(pi: ExtensionAPI, options: RuntimeManagerOp
     return { config, logger, sessionFile };
   }
 
-  return { load, reload, syncTools };
+  return { load, reload, syncTools, onReload };
 }

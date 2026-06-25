@@ -54,6 +54,24 @@ test("reload reads changed config and removes disabled owned tool", async () => 
   assert.deepEqual(pi.activeTools, ["read", "custom"]);
 });
 
+test("reload notifies subscribers with the refreshed config", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pi-ext-runtime-"));
+  const agentDir = join(root, "agent");
+  await mkdir(agentDir, { recursive: true });
+  const pi = createPiMock(["read"]);
+  const manager = createRuntimeManager(pi, { agentDir });
+  const seen: unknown[] = [];
+
+  manager.load(createCtx(root, false));
+  manager.onReload((runtime) => {
+    seen.push((runtime.config.modules.dcp.config.ui as any)?.compressedBlocksWidget);
+  });
+  await writeFile(join(agentDir, "pi-ext.json"), JSON.stringify({ dcp: { ui: { compressedBlocksWidget: false } } }));
+  manager.reload(createCtx(root, false));
+
+  assert.deepEqual(seen, [false]);
+});
+
 test("reloads when session file changes", async () => {
   const root = mkdtempSync(join(tmpdir(), "pi-ext-runtime-"));
   const agentDir = join(root, "agent");

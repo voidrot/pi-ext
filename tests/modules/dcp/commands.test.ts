@@ -12,4 +12,8 @@ test("parses dcp commands", () => {
     action: "decompress",
     args: ["b2"],
   });
+  assert.deepEqual(parseDcpCommand("stats"), {
+    action: "stats",
+    args: [],
+  });
 });

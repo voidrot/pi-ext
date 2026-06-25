@@ -23,6 +23,10 @@ export interface DcpConfig {
     protectedTools: string[];
     protectUserMessages: boolean;
   };
+  ui: {
+    compressedBlocksWidget: boolean;
+    compressionNotifications: boolean;
+  };
   strategies: {
     deduplication: { enabled: boolean; protectedTools: string[] };
     purgeErrors: { enabled: boolean; turns: number; protectedTools: string[] };
@@ -49,6 +53,10 @@ export const defaultConfig: DcpConfig = {
     nudgeForce: "soft",
     protectedTools: ["read", "write", "edit", "bash", "task", "skill"],
     protectUserMessages: false,
+  },
+  ui: {
+    compressedBlocksWidget: true,
+    compressionNotifications: true,
   },
   strategies: {
     deduplication: { enabled: true, protectedTools: [] },
@@ -89,6 +97,10 @@ function mergeConfig(base: DcpConfig, override: Partial<DcpConfig>): DcpConfig {
         override.compress?.iterationNudgeThreshold ?? base.compress.iterationNudgeThreshold,
       ),
       protectedTools: unique([...(base.compress.protectedTools ?? []), ...(override.compress?.protectedTools ?? [])]),
+    },
+    ui: {
+      compressedBlocksWidget: override.ui?.compressedBlocksWidget ?? base.ui.compressedBlocksWidget,
+      compressionNotifications: override.ui?.compressionNotifications ?? base.ui.compressionNotifications,
     },
     strategies: {
       deduplication: {

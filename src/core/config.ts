@@ -89,8 +89,30 @@ export function getPiExtConfigPaths(options: LoadPiExtConfigOptions): string[] {
 }
 
 export function mergePiExtConfig(base: PiExtConfig, override: unknown): PiExtConfig {
-  const merged = deepMerge(base, isPlainObject(override) ? override : {});
+  const expandedOverride = expandDcpConfigShorthand(override);
+  const merged = deepMerge(base, expandedOverride);
   return normalizeConfig(merged);
+}
+
+function expandDcpConfigShorthand(value: unknown): Record<string, unknown> {
+  if (!isPlainObject(value)) return {};
+  if (!isPlainObject(value.dcp)) return value;
+
+  const expanded = clone(value);
+  const modules = isPlainObject(expanded.modules) ? expanded.modules : {};
+  const dcpModule = isPlainObject(modules.dcp) ? modules.dcp : {};
+  const dcpConfig = isPlainObject(dcpModule.config) ? dcpModule.config : {};
+
+  expanded.modules = {
+    ...modules,
+    dcp: {
+      ...dcpModule,
+      config: deepMerge(expanded.dcp, dcpConfig),
+    },
+  };
+  delete expanded.dcp;
+
+  return expanded;
 }
 
 function normalizeConfig(value: unknown): PiExtConfig {
@@ -98,6 +120,7 @@ function normalizeConfig(value: unknown): PiExtConfig {
   const dcp: Record<string, any> = isPlainObject(source.modules?.dcp) ? source.modules.dcp : {};
   const dcpTools: Record<string, any> = isPlainObject(dcp.tools) ? dcp.tools : {};
   const compressTool: Record<string, any> = isPlainObject(dcpTools.compress) ? dcpTools.compress : {};
+  const moduleDcpConfig: Record<string, any> = isPlainObject(dcp.config) ? dcp.config : {};
 
   return {
     enabled: boolOr(source.enabled, defaultPiExtConfig.enabled),
@@ -110,7 +133,7 @@ function normalizeConfig(value: unknown): PiExtConfig {
             enabled: boolOr(compressTool.enabled, defaultPiExtConfig.modules.dcp.tools.compress.enabled),
           },
         },
-        config: isPlainObject(dcp.config) ? clone(dcp.config) : {},
+        config: clone(moduleDcpConfig),
       },
     },
   };
