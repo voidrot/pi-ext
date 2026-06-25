@@ -22,6 +22,15 @@ test("loads defaults when no config exists", () => {
   assert.equal(config.modules.dashboard.server.host, "127.0.0.1");
   assert.equal(config.modules.dashboard.server.port, "auto");
   assert.equal(config.modules.dashboard.browser.openOnStart, true);
+  assert.equal(config.modules.agents.enabled, true);
+  assert.equal(config.modules.agents.orchestrator.enabled, true);
+  assert.equal(config.modules.agents.tools.runSubagent.enabled, true);
+  assert.equal(config.modules.agents.tools.getSubagentResult.enabled, true);
+  assert.equal(config.modules.agents.tools.steerSubagent.enabled, true);
+  assert.equal(config.modules.agents.maxParallel, 4);
+  assert.equal(config.modules.agents.childExtensions.mode, "inherit-safe");
+  assert.equal(config.modules.agents.transcripts.persist, true);
+  assert.equal(config.modules.agents.stall.enabled, true);
 });
 
 test("merges global jsonc over defaults", async () => {

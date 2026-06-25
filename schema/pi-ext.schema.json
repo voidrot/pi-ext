@@ -152,6 +152,127 @@
               }
             }
           }
+        },
+        "agents": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable in-process subagents and orchestration tools."
+            },
+            "orchestrator": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Append default orchestrator instructions to parent sessions."
+                }
+              }
+            },
+            "tools": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "runSubagent": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the run_subagent tool."
+                    }
+                  }
+                },
+                "getSubagentResult": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the get_subagent_result tool."
+                    }
+                  }
+                },
+                "steerSubagent": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose and activate the steer_subagent tool."
+                    }
+                  }
+                }
+              }
+            },
+            "maxParallel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8,
+              "description": "Maximum number of parallel foreground/background subagent tasks per tool call."
+            },
+            "defaultBackground": {
+              "type": "boolean",
+              "description": "Run subagents in background by default when the tool omits background."
+            },
+            "childExtensions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "inherit-safe",
+                    "none"
+                  ],
+                  "description": "Whether child sessions inherit extension loading with recursion guard or disable extensions entirely."
+                },
+                "recursiveToolDenylist": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Tool names removed from child sessions after extension binding."
+                }
+              }
+            },
+            "transcripts": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "persist": {
+                  "type": "boolean",
+                  "description": "Persist child transcripts under the parent session task directory when possible."
+                }
+              }
+            },
+            "stall": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Notify when a child run has no observable activity for timeoutMs."
+                },
+                "timeoutMs": {
+                  "type": "integer",
+                  "minimum": 1000,
+                  "description": "No-activity interval before marking a child run stalled."
+                },
+                "notify": {
+                  "type": "boolean",
+                  "description": "Send a parent follow-up notification when a background child stalls."
+                },
+                "abortAfterMs": {
+                  "type": "integer",
+                  "minimum": 1000,
+                  "description": "Reserved for future auto-abort after stall."
+                }
+              }
+            }
+          }
         }
       }
     }

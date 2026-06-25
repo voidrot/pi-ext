@@ -33,20 +33,39 @@ export interface DashboardAppOptions {
   getStatus: () => DashboardStatusPayload;
 }
 
+const statusBeforeStartupMessage = "Dashboard server status requested before startup";
+
 export function createDashboardApp(options: DashboardAppOptions): Hono {
   const app = new Hono();
 
   app.get("/healthz", (c) => c.text("ok"));
 
-  app.get("/api/status", (c) =>
-    c.body(JSON.stringify(options.getStatus()), 200, { "content-type": "application/json; charset=utf-8" })
-  );
+  app.get("/api/status", (c) => {
+    const status = getStatusOrStartup(options.getStatus);
+    if (!status) {
+      return c.body(JSON.stringify({ status: "starting" }), 503, { "content-type": "application/json; charset=utf-8" });
+    }
+    return c.body(JSON.stringify(status), 200, { "content-type": "application/json; charset=utf-8" });
+  });
 
-  app.get("/", (c) => c.html(renderDashboardHtml(options.getStatus())));
+  app.get("/", (c) => {
+    const status = getStatusOrStartup(options.getStatus);
+    if (!status) return c.html("<!doctype html><title>Pi Ext Dashboard</title><h1>Dashboard starting</h1>", 503);
+    return c.html(renderDashboardHtml(status));
+  });
 
   app.notFound((c) => c.text("not found", 404));
 
   return app;
+}
+
+function getStatusOrStartup(getStatus: () => DashboardStatusPayload): DashboardStatusPayload | undefined {
+  try {
+    return getStatus();
+  } catch (error) {
+    if (error instanceof Error && error.message === statusBeforeStartupMessage) return undefined;
+    throw error;
+  }
 }
 
 export class DashboardServer {
@@ -113,7 +132,7 @@ export class DashboardServer {
 
   private createStatus(): DashboardStatusPayload {
     if (!this.state || !this.snapshot) {
-      throw new Error("Dashboard server status requested before startup");
+      throw new Error(statusBeforeStartupMessage);
     }
 
     return createDashboardStatus({

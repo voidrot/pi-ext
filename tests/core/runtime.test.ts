@@ -36,7 +36,7 @@ test("loads runtime config and syncs active tools", () => {
   const runtime = manager.load(createCtx(root, false));
 
   assert.equal(runtime.config.enabled, true);
-  assert.deepEqual(new Set(pi.activeTools), new Set(["read", "compress"]));
+  assert.deepEqual(new Set(pi.activeTools), new Set(["read", "compress", "run_subagent", "get_subagent_result", "steer_subagent"]));
 });
 
 test("reload reads changed config and removes disabled owned tool", async () => {
@@ -47,10 +47,19 @@ test("reload reads changed config and removes disabled owned tool", async () => 
   const manager = createRuntimeManager(pi, { agentDir });
 
   manager.load(createCtx(root, false));
-  await writeFile(join(agentDir, "pi-ext.json"), JSON.stringify({ modules: { dcp: { tools: { compress: { enabled: false } } } } }));
+  await writeFile(
+    join(agentDir, "pi-ext.json"),
+    JSON.stringify({
+      modules: {
+        dcp: { tools: { compress: { enabled: false } } },
+        agents: { enabled: false },
+      },
+    }),
+  );
   const runtime = manager.reload(createCtx(root, false));
 
   assert.equal(runtime.config.modules.dcp.tools.compress.enabled, false);
+  assert.equal(runtime.config.modules.agents.enabled, false);
   assert.deepEqual(pi.activeTools, ["read", "custom"]);
 });
 

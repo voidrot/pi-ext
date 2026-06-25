@@ -9,6 +9,7 @@ import type { ModuleId } from "./core/modules";
 import { createRuntimeManager } from "./core/runtime";
 import { dcpModule } from "./modules/dcp";
 import { dashboardModule } from "./modules/dashboard";
+import { agentsModule } from "./modules/agents";
 
 export default function piExt(pi: ExtensionAPI): void {
   const agentDir = getAgentDir();
@@ -36,6 +37,7 @@ export default function piExt(pi: ExtensionAPI): void {
   registerPiExtCommands(pi, runtime);
   dcpModule.register(moduleApi);
   dashboardModule.register(moduleApi);
+  agentsModule.register(moduleApi);
 
   pi.on("session_start", async (_event, ctx) => {
     runtime.reload(ctx);

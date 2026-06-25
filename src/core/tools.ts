@@ -13,6 +13,21 @@ export const ownedTools: OwnedTool[] = [
     moduleId: "dcp",
     enabled: (config) => config.enabled && config.modules.dcp.enabled && config.modules.dcp.tools.compress.enabled,
   },
+  {
+    name: "run_subagent",
+    moduleId: "agents",
+    enabled: (config) => config.enabled && config.modules.agents.enabled && config.modules.agents.tools.runSubagent.enabled,
+  },
+  {
+    name: "get_subagent_result",
+    moduleId: "agents",
+    enabled: (config) => config.enabled && config.modules.agents.enabled && config.modules.agents.tools.getSubagentResult.enabled,
+  },
+  {
+    name: "steer_subagent",
+    moduleId: "agents",
+    enabled: (config) => config.enabled && config.modules.agents.enabled && config.modules.agents.tools.steerSubagent.enabled,
+  },
 ];
 
 export function reconcileActiveTools(activeTools: string[], config: PiExtConfig): string[] {

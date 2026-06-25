@@ -36,6 +36,27 @@
         "openOnStart": true,
         "reopenOnSessionChange": false
       }
+    },
+    "agents": {
+      "enabled": true,
+      "orchestrator": { "enabled": true },
+      "tools": {
+        "runSubagent": { "enabled": true },
+        "getSubagentResult": { "enabled": true },
+        "steerSubagent": { "enabled": true }
+      },
+      "maxParallel": 4,
+      "defaultBackground": false,
+      "childExtensions": {
+        "mode": "inherit-safe",
+        "recursiveToolDenylist": ["run_subagent", "get_subagent_result", "steer_subagent"]
+      },
+      "transcripts": { "persist": true },
+      "stall": {
+        "enabled": true,
+        "timeoutMs": 120000,
+        "notify": true
+      }
     }
   }
 }

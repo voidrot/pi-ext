@@ -31,12 +31,42 @@ export interface DashboardModuleConfig {
   };
 }
 
+export type AgentsChildExtensionMode = "inherit-safe" | "none";
+
+export interface AgentsModuleConfig {
+  enabled: boolean;
+  orchestrator: {
+    enabled: boolean;
+  };
+  tools: {
+    runSubagent: ToolToggleConfig;
+    getSubagentResult: ToolToggleConfig;
+    steerSubagent: ToolToggleConfig;
+  };
+  maxParallel: number;
+  defaultBackground: boolean;
+  childExtensions: {
+    mode: AgentsChildExtensionMode;
+    recursiveToolDenylist: string[];
+  };
+  transcripts: {
+    persist: boolean;
+  };
+  stall: {
+    enabled: boolean;
+    timeoutMs: number;
+    notify: boolean;
+    abortAfterMs?: number;
+  };
+}
+
 export interface PiExtConfig {
   enabled: boolean;
   debug: boolean;
   modules: {
     dcp: DcpModuleConfig;
     dashboard: DashboardModuleConfig;
+    agents: AgentsModuleConfig;
   };
 }
 
@@ -77,6 +107,27 @@ export const defaultPiExtConfig: PiExtConfig = {
       browser: {
         openOnStart: true,
         reopenOnSessionChange: false,
+      },
+    },
+    agents: {
+      enabled: true,
+      orchestrator: { enabled: true },
+      tools: {
+        runSubagent: { enabled: true },
+        getSubagentResult: { enabled: true },
+        steerSubagent: { enabled: true },
+      },
+      maxParallel: 4,
+      defaultBackground: false,
+      childExtensions: {
+        mode: "inherit-safe",
+        recursiveToolDenylist: ["run_subagent", "get_subagent_result", "steer_subagent"],
+      },
+      transcripts: { persist: true },
+      stall: {
+        enabled: true,
+        timeoutMs: 120_000,
+        notify: true,
       },
     },
   },
@@ -157,6 +208,15 @@ function normalizeConfig(value: unknown): PiExtConfig {
   const dashboardServer: Record<string, any> = isPlainObject(dashboard.server) ? dashboard.server : {};
   const dashboardPortRange: Record<string, any> = isPlainObject(dashboardServer.portRange) ? dashboardServer.portRange : {};
   const dashboardBrowser: Record<string, any> = isPlainObject(dashboard.browser) ? dashboard.browser : {};
+  const agents: Record<string, any> = isPlainObject(source.modules?.agents) ? source.modules.agents : {};
+  const agentsOrchestrator: Record<string, any> = isPlainObject(agents.orchestrator) ? agents.orchestrator : {};
+  const agentsTools: Record<string, any> = isPlainObject(agents.tools) ? agents.tools : {};
+  const agentsRunSubagentTool: Record<string, any> = isPlainObject(agentsTools.runSubagent) ? agentsTools.runSubagent : {};
+  const agentsGetResultTool: Record<string, any> = isPlainObject(agentsTools.getSubagentResult) ? agentsTools.getSubagentResult : {};
+  const agentsSteerTool: Record<string, any> = isPlainObject(agentsTools.steerSubagent) ? agentsTools.steerSubagent : {};
+  const childExtensions: Record<string, any> = isPlainObject(agents.childExtensions) ? agents.childExtensions : {};
+  const transcripts: Record<string, any> = isPlainObject(agents.transcripts) ? agents.transcripts : {};
+  const stall: Record<string, any> = isPlainObject(agents.stall) ? agents.stall : {};
 
   return {
     enabled: boolOr(source.enabled, defaultPiExtConfig.enabled),
@@ -189,6 +249,41 @@ function normalizeConfig(value: unknown): PiExtConfig {
           ),
         },
       },
+      agents: {
+        enabled: boolOr(agents.enabled, defaultPiExtConfig.modules.agents.enabled),
+        orchestrator: {
+          enabled: boolOr(agentsOrchestrator.enabled, defaultPiExtConfig.modules.agents.orchestrator.enabled),
+        },
+        tools: {
+          runSubagent: {
+            enabled: boolOr(agentsRunSubagentTool.enabled, defaultPiExtConfig.modules.agents.tools.runSubagent.enabled),
+          },
+          getSubagentResult: {
+            enabled: boolOr(agentsGetResultTool.enabled, defaultPiExtConfig.modules.agents.tools.getSubagentResult.enabled),
+          },
+          steerSubagent: {
+            enabled: boolOr(agentsSteerTool.enabled, defaultPiExtConfig.modules.agents.tools.steerSubagent.enabled),
+          },
+        },
+        maxParallel: positiveIntOr(agents.maxParallel, defaultPiExtConfig.modules.agents.maxParallel),
+        defaultBackground: boolOr(agents.defaultBackground, defaultPiExtConfig.modules.agents.defaultBackground),
+        childExtensions: {
+          mode: childExtensionModeOr(childExtensions.mode, defaultPiExtConfig.modules.agents.childExtensions.mode),
+          recursiveToolDenylist: stringArrayOr(
+            childExtensions.recursiveToolDenylist,
+            defaultPiExtConfig.modules.agents.childExtensions.recursiveToolDenylist,
+          ),
+        },
+        transcripts: {
+          persist: boolOr(transcripts.persist, defaultPiExtConfig.modules.agents.transcripts.persist),
+        },
+        stall: {
+          enabled: boolOr(stall.enabled, defaultPiExtConfig.modules.agents.stall.enabled),
+          timeoutMs: positiveIntOr(stall.timeoutMs, defaultPiExtConfig.modules.agents.stall.timeoutMs),
+          notify: boolOr(stall.notify, defaultPiExtConfig.modules.agents.stall.notify),
+          abortAfterMs: optionalPositiveInt(stall.abortAfterMs, defaultPiExtConfig.modules.agents.stall.abortAfterMs),
+        },
+      },
     },
   };
 }
@@ -219,6 +314,24 @@ function stringOr(value: unknown, fallback: string): string {
 
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isInteger(value) ? value : fallback;
+}
+
+function positiveIntOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function optionalPositiveInt(value: unknown, fallback: number | undefined): number | undefined {
+  return value === undefined ? fallback : typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function childExtensionModeOr(value: unknown, fallback: AgentsChildExtensionMode): AgentsChildExtensionMode {
+  return value === "inherit-safe" || value === "none" ? value : fallback;
+}
+
+function stringArrayOr(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) return [...fallback];
+  const next = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim());
+  return next.length > 0 ? next : [...fallback];
 }
 
 function portOr(value: unknown, fallback: number | "auto"): number | "auto" {

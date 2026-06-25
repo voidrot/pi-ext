@@ -83,6 +83,23 @@ test("creates a Hono app that serves health, JSON, shadcn/Tailwind HTML, and 404
   assert.equal(missing.status, 404);
 });
 
+test("returns a startup guard when status is requested before server state is ready", async () => {
+  const app = createDashboardApp({
+    getStatus: () => {
+      throw new Error("Dashboard server status requested before startup");
+    },
+  });
+
+  const status = await app.request("/api/status");
+  assert.equal(status.status, 503);
+  assert.equal(status.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.deepEqual(await status.json(), { status: "starting" });
+
+  const page = await app.request("/");
+  assert.equal(page.status, 503);
+  assert.match(await page.text(), /Dashboard starting/);
+});
+
 test("starts on an auto-selected port and serves health, JSON, HTML, and 404", async () => {
   const port = await getFreePort();
   const server = new DashboardServer({ host: "127.0.0.1", port: "auto", portRange: { start: port, end: port } });

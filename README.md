@@ -14,6 +14,11 @@ A single Pi.dev package that hosts Voidrot Pi extensions, workflow modules, and 
   - Uses Tailwind v4 browser CSS with shadcn-style primitives for placeholder UI cards/actions.
   - Serves placeholder extension/runtime/storage status at `/`, JSON at `/api/status`, and health at `/healthz`.
   - Provides a foundation for future DCP global/project SQLite statistics.
+- `agents` — in-process subagents for orchestrated Pi sessions.
+  - Discovers markdown agents from `~/.pi/agent/agents/*.md`.
+  - Registers `run_subagent`, `get_subagent_result`, and `steer_subagent` when enabled.
+  - Persists child transcripts under the parent session task directory when possible.
+  - Sends parent follow-up notifications when background children complete, fail, abort, or stall.
 
 ## Install locally for development
 
@@ -115,6 +120,19 @@ Minimal global config:
         "openOnStart": true,
         "reopenOnSessionChange": false
       }
+    },
+    "agents": {
+      "enabled": true,
+      "orchestrator": { "enabled": true },
+      "tools": {
+        "runSubagent": { "enabled": true },
+        "getSubagentResult": { "enabled": true },
+        "steerSubagent": { "enabled": true }
+      },
+      "maxParallel": 4,
+      "childExtensions": { "mode": "inherit-safe" },
+      "transcripts": { "persist": true },
+      "stall": { "enabled": true, "timeoutMs": 120000, "notify": true }
     }
   }
 }
