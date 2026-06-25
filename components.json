@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "radix-nova",
+  "tailwind": {
+    "config": "",
+    "css": "src/modules/dashboard/styles.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "rsc": false,
+  "tsx": true,
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "src/modules/dashboard",
+    "ui": "src/modules/dashboard",
+    "utils": "src/modules/dashboard/ui",
+    "lib": "src/modules/dashboard",
+    "hooks": "src/modules/dashboard"
+  }
+}

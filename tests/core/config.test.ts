@@ -18,6 +18,10 @@ test("loads defaults when no config exists", () => {
   assert.equal(config.enabled, true);
   assert.equal(config.modules.dcp.enabled, true);
   assert.equal(config.modules.dcp.tools.compress.enabled, true);
+  assert.equal(config.modules.dashboard.enabled, true);
+  assert.equal(config.modules.dashboard.server.host, "127.0.0.1");
+  assert.equal(config.modules.dashboard.server.port, "auto");
+  assert.equal(config.modules.dashboard.browser.openOnStart, true);
 });
 
 test("merges global jsonc over defaults", async () => {
@@ -92,6 +96,39 @@ test("merges module config without losing defaults", () => {
   assert.equal(config.modules.dcp.enabled, true);
   assert.equal(config.modules.dcp.tools.compress.enabled, true);
   assert.deepEqual(config.modules.dcp.config, { compress: { permission: "deny" } });
+});
+
+test("merges partial dashboard browser config without losing server defaults", () => {
+  const config = mergePiExtConfig(defaultPiExtConfig, {
+    modules: {
+      dashboard: {
+        browser: { openOnStart: false },
+      },
+    },
+  });
+
+  assert.equal(config.modules.dashboard.enabled, true);
+  assert.equal(config.modules.dashboard.browser.openOnStart, false);
+  assert.equal(config.modules.dashboard.browser.reopenOnSessionChange, false);
+  assert.equal(config.modules.dashboard.server.host, "127.0.0.1");
+  assert.equal(config.modules.dashboard.server.port, "auto");
+  assert.deepEqual(config.modules.dashboard.server.portRange, { start: 17380, end: 17480 });
+});
+
+test("merges partial dashboard server config without losing browser defaults", () => {
+  const config = mergePiExtConfig(defaultPiExtConfig, {
+    modules: {
+      dashboard: {
+        server: { port: 17381 },
+      },
+    },
+  });
+
+  assert.equal(config.modules.dashboard.enabled, true);
+  assert.equal(config.modules.dashboard.server.port, 17381);
+  assert.equal(config.modules.dashboard.server.host, "127.0.0.1");
+  assert.equal(config.modules.dashboard.browser.openOnStart, true);
+  assert.equal(config.modules.dashboard.browser.reopenOnSessionChange, false);
 });
 
 test("accepts top-level dcp config shorthand for global DCP settings", () => {

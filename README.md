@@ -8,6 +8,12 @@ A single Pi.dev package that hosts Voidrot Pi extensions, workflow modules, and 
   - Registers `/dcp`, `/dcp-stats`, and `/dcp-compress` commands.
   - Registers the `compress` tool when enabled.
   - Rewrites outgoing model context with durable summaries while preserving the session file.
+- `dashboard` — local background dashboard webserver.
+  - Starts on session start and opens `http://127.0.0.1:<port>/` by default.
+  - Uses Hono for routing/server rendering and Hono JSX for the dashboard page.
+  - Uses Tailwind v4 browser CSS with shadcn-style primitives for placeholder UI cards/actions.
+  - Serves placeholder extension/runtime/storage status at `/`, JSON at `/api/status`, and health at `/healthz`.
+  - Provides a foundation for future DCP global/project SQLite statistics.
 
 ## Install locally for development
 
@@ -97,6 +103,18 @@ Minimal global config:
           "compressionNotifications": true
         }
       }
+    },
+    "dashboard": {
+      "enabled": true,
+      "server": {
+        "host": "127.0.0.1",
+        "port": "auto",
+        "portRange": { "start": 17380, "end": 17480 }
+      },
+      "browser": {
+        "openOnStart": true,
+        "reopenOnSessionChange": false
+      }
     }
   }
 }
@@ -128,6 +146,30 @@ Disable only Dynamic Context Pruning:
 {
   "modules": {
     "dcp": { "enabled": false }
+  }
+}
+```
+
+Disable browser auto-open while keeping the local dashboard server available:
+
+```jsonc
+{
+  "modules": {
+    "dashboard": {
+      "browser": { "openOnStart": false }
+    }
+  }
+}
+```
+
+Use a fixed dashboard port:
+
+```jsonc
+{
+  "modules": {
+    "dashboard": {
+      "server": { "host": "127.0.0.1", "port": 17380 }
+    }
   }
 }
 ```
@@ -175,6 +217,7 @@ Core and modules register migrations at extension startup. Table model files dec
 - `/pi-ext status` — show top-level module/tool enable state.
 - `/pi-ext config` — show merged runtime config.
 - `/pi-ext reload` — reload `pi-ext.json[c]` without restarting Pi.
+- `/dashboard` — open the local Pi Ext dashboard in the system browser.
 - `/dcp` — show/control DCP state (`/dcp stats` also opens the stats overlay).
 - `/dcp-stats` — open a high-definition overlay with block and token statistics.
 - `/dcp-compress` — ask the model to run one DCP compression pass.

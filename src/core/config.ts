@@ -15,11 +15,28 @@ export interface DcpModuleConfig {
   config: Record<string, unknown>;
 }
 
+export interface DashboardModuleConfig {
+  enabled: boolean;
+  server: {
+    host: string;
+    port: number | "auto";
+    portRange: {
+      start: number;
+      end: number;
+    };
+  };
+  browser: {
+    openOnStart: boolean;
+    reopenOnSessionChange: boolean;
+  };
+}
+
 export interface PiExtConfig {
   enabled: boolean;
   debug: boolean;
   modules: {
     dcp: DcpModuleConfig;
+    dashboard: DashboardModuleConfig;
   };
 }
 
@@ -46,6 +63,21 @@ export const defaultPiExtConfig: PiExtConfig = {
         compress: { enabled: true },
       },
       config: {},
+    },
+    dashboard: {
+      enabled: true,
+      server: {
+        host: "127.0.0.1",
+        port: "auto",
+        portRange: {
+          start: 17380,
+          end: 17480,
+        },
+      },
+      browser: {
+        openOnStart: true,
+        reopenOnSessionChange: false,
+      },
     },
   },
 };
@@ -121,6 +153,10 @@ function normalizeConfig(value: unknown): PiExtConfig {
   const dcpTools: Record<string, any> = isPlainObject(dcp.tools) ? dcp.tools : {};
   const compressTool: Record<string, any> = isPlainObject(dcpTools.compress) ? dcpTools.compress : {};
   const moduleDcpConfig: Record<string, any> = isPlainObject(dcp.config) ? dcp.config : {};
+  const dashboard: Record<string, any> = isPlainObject(source.modules?.dashboard) ? source.modules.dashboard : {};
+  const dashboardServer: Record<string, any> = isPlainObject(dashboard.server) ? dashboard.server : {};
+  const dashboardPortRange: Record<string, any> = isPlainObject(dashboardServer.portRange) ? dashboardServer.portRange : {};
+  const dashboardBrowser: Record<string, any> = isPlainObject(dashboard.browser) ? dashboard.browser : {};
 
   return {
     enabled: boolOr(source.enabled, defaultPiExtConfig.enabled),
@@ -134,6 +170,24 @@ function normalizeConfig(value: unknown): PiExtConfig {
           },
         },
         config: clone(moduleDcpConfig),
+      },
+      dashboard: {
+        enabled: boolOr(dashboard.enabled, defaultPiExtConfig.modules.dashboard.enabled),
+        server: {
+          host: stringOr(dashboardServer.host, defaultPiExtConfig.modules.dashboard.server.host),
+          port: portOr(dashboardServer.port, defaultPiExtConfig.modules.dashboard.server.port),
+          portRange: {
+            start: numberOr(dashboardPortRange.start, defaultPiExtConfig.modules.dashboard.server.portRange.start),
+            end: numberOr(dashboardPortRange.end, defaultPiExtConfig.modules.dashboard.server.portRange.end),
+          },
+        },
+        browser: {
+          openOnStart: boolOr(dashboardBrowser.openOnStart, defaultPiExtConfig.modules.dashboard.browser.openOnStart),
+          reopenOnSessionChange: boolOr(
+            dashboardBrowser.reopenOnSessionChange,
+            defaultPiExtConfig.modules.dashboard.browser.reopenOnSessionChange,
+          ),
+        },
       },
     },
   };
@@ -157,6 +211,18 @@ function isPlainObject(value: unknown): value is Record<string, any> {
 
 function boolOr(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function stringOr(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+}
+
+function numberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isInteger(value) ? value : fallback;
+}
+
+function portOr(value: unknown, fallback: number | "auto"): number | "auto" {
+  return value === "auto" || (typeof value === "number" && Number.isInteger(value)) ? value : fallback;
 }
 
 function clone<T>(value: T): T {

@@ -1,0 +1,165 @@
+import { type Server } from "node:http";
+import { randomUUID } from "node:crypto";
+import { createAdaptorServer } from "@hono/node-server";
+import { Hono } from "hono";
+import { createDashboardStatus, renderDashboardHtml, type DashboardStatusPayload } from "./render";
+import type { DashboardModuleConfig } from "../../core/config";
+
+export type DashboardServerConfig = DashboardModuleConfig["server"];
+
+export interface DashboardServerSnapshot {
+  cwd: string;
+  projectTrusted: boolean;
+  sessionFile?: string;
+  debug: boolean;
+  enabled: boolean;
+  modules: {
+    dcp: boolean;
+    dashboard: boolean;
+  };
+  globalDatabasePath: string;
+  projectDatabasePath?: string;
+}
+
+export interface DashboardServerState {
+  instanceId: string;
+  startedAt: Date;
+  host: string;
+  port: number;
+  url: string;
+}
+
+export interface DashboardAppOptions {
+  getStatus: () => DashboardStatusPayload;
+}
+
+export function createDashboardApp(options: DashboardAppOptions): Hono {
+  const app = new Hono();
+
+  app.get("/healthz", (c) => c.text("ok"));
+
+  app.get("/api/status", (c) =>
+    c.body(JSON.stringify(options.getStatus()), 200, { "content-type": "application/json; charset=utf-8" })
+  );
+
+  app.get("/", (c) => c.html(renderDashboardHtml(options.getStatus())));
+
+  app.notFound((c) => c.text("not found", 404));
+
+  return app;
+}
+
+export class DashboardServer {
+  private server: Server | undefined;
+  private state: DashboardServerState | undefined;
+  private snapshot: DashboardServerSnapshot | undefined;
+
+  constructor(private readonly config: DashboardServerConfig) {}
+
+  async start(snapshot: DashboardServerSnapshot): Promise<DashboardServerState> {
+    this.snapshot = snapshot;
+    if (this.server && this.state) return this.state;
+
+    const ports = this.config.port === "auto" ? getPortRange(this.config.portRange.start, this.config.portRange.end) : [this.config.port];
+    const errors: unknown[] = [];
+
+    for (const port of ports) {
+      try {
+        const app = createDashboardApp({ getStatus: () => this.createStatus() });
+        const server = createAdaptorServer({ fetch: app.fetch }) as Server;
+        await listen(server, this.config.host, port);
+        const address = server.address();
+        if (!address || typeof address !== "object") throw new Error("Dashboard server did not bind to a TCP port");
+
+        const state: DashboardServerState = {
+          instanceId: randomUUID(),
+          startedAt: new Date(),
+          host: this.config.host,
+          port: address.port,
+          url: `http://${this.config.host}:${address.port}/`,
+        };
+        this.server = server;
+        this.state = state;
+        return state;
+      } catch (error) {
+        errors.push(error);
+        if (this.config.port !== "auto") break;
+      }
+    }
+
+    throw new Error(`Unable to start dashboard server on ${this.config.host}: ${formatPortConfig(this.config)}`, {
+      cause: errors.at(-1),
+    });
+  }
+
+  updateSnapshot(snapshot: DashboardServerSnapshot): void {
+    this.snapshot = snapshot;
+  }
+
+  async stop(): Promise<void> {
+    const server = this.server;
+    this.server = undefined;
+    this.state = undefined;
+    this.snapshot = undefined;
+    if (!server) return;
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+
+  getState(): DashboardServerState | undefined {
+    return this.state;
+  }
+
+  private createStatus(): DashboardStatusPayload {
+    if (!this.state || !this.snapshot) {
+      throw new Error("Dashboard server status requested before startup");
+    }
+
+    return createDashboardStatus({
+      instanceId: this.state.instanceId,
+      startedAt: this.state.startedAt,
+      url: this.state.url,
+      host: this.state.host,
+      port: this.state.port,
+      cwd: this.snapshot.cwd,
+      projectTrusted: this.snapshot.projectTrusted,
+      sessionFile: this.snapshot.sessionFile,
+      debug: this.snapshot.debug,
+      enabled: this.snapshot.enabled,
+      modules: this.snapshot.modules,
+      globalDatabasePath: this.snapshot.globalDatabasePath,
+      projectDatabasePath: this.snapshot.projectDatabasePath,
+    });
+  }
+}
+
+function listen(server: Server, host: string, port: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onError = (error: Error): void => {
+      server.off("listening", onListening);
+      reject(error);
+    };
+    const onListening = (): void => {
+      server.off("error", onError);
+      resolve();
+    };
+
+    server.once("error", onError);
+    server.once("listening", onListening);
+    server.listen(port, host);
+  });
+}
+
+function getPortRange(start: number, end: number): number[] {
+  const first = Math.min(start, end);
+  const last = Math.max(start, end);
+  const ports: number[] = [];
+  for (let port = first; port <= last; port++) ports.push(port);
+  return ports;
+}
+
+function formatPortConfig(config: DashboardServerConfig): string {
+  return config.port === "auto" ? `${config.portRange.start}-${config.portRange.end}` : String(config.port);
+}
+

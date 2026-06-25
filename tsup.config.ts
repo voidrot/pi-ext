@@ -13,6 +13,11 @@ export default defineConfig({
     "typebox",
     "tiktoken",
     "better-sqlite3",
-    "kysely"
+    "kysely",
+    "hono",
+    "@hono/node-server",
+    "clsx",
+    "tailwind-merge",
+    "class-variance-authority"
   ]
 });

@@ -24,6 +24,18 @@
           "purgeErrors": { "enabled": true, "turns": 4 }
         }
       }
+    },
+    "dashboard": {
+      "enabled": true,
+      "server": {
+        "host": "127.0.0.1",
+        "port": "auto",
+        "portRange": { "start": 17380, "end": 17480 }
+      },
+      "browser": {
+        "openOnStart": true,
+        "reopenOnSessionChange": false
+      }
     }
   }
 }

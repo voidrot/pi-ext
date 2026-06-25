@@ -5,7 +5,9 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "enabled": {
       "type": "boolean",
       "description": "Enable or disable all @voidrot/pi-ext modules and owned tools."
@@ -83,6 +85,69 @@
                       "description": "Show a toast notification after each compression pass."
                     }
                   }
+                }
+              }
+            }
+          }
+        },
+        "dashboard": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the local Pi Ext dashboard webserver."
+            },
+            "server": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "description": "Loopback host to bind the dashboard server to."
+                },
+                "port": {
+                  "description": "Fixed dashboard port or auto to scan the configured range.",
+                  "oneOf": [
+                    {
+                      "const": "auto"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    }
+                  ]
+                },
+                "portRange": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "start": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    },
+                    "end": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    }
+                  }
+                }
+              }
+            },
+            "browser": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "openOnStart": {
+                  "type": "boolean",
+                  "description": "Open the dashboard URL in the system browser when a Pi session starts."
+                },
+                "reopenOnSessionChange": {
+                  "type": "boolean",
+                  "description": "Open another dashboard browser tab when Pi session state changes."
                 }
               }
             }
